@@ -11,7 +11,21 @@ all = ['check_item_exist', 'create_OB', 'ob_add_target', 'ob_add_description',
 
 def get_dit_med(ksc, tel='UT', verbose=True):
     '''
-    Find the proper dit and ndit for MEDIUM.
+    Find the proper dit and ndit for MEDIUM (COMBINED).
+
+    Parameters
+    ----------
+    ksc : float
+        The Ks magnitude of the source.
+    tel : string
+        The telescope name, 'UT' or 'AT'.
+    verbose : bool
+        Print the warning if True.
+    
+    Returns
+    -------
+    dit, ndit : float
+        The DIT and NDIT.
     '''
     if tel == 'AT':
         ksc = ksc + 3
@@ -202,6 +216,77 @@ class p2api_GRAVITY(object):
                                      vltitype=['snapshot']):
         '''
         Add acquisition template: GRAVITY_dual_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        ft_mode : string
+            The fringe tracker mode, 'AUTO', 1, 2, 7 or 9.
+        met_mode : string
+            The metrology mode, 'ON', 'FAINT', or 'OFF'.
+        picksc : string
+            Whether to pick the SC source manually, 'T', 'A', or 'F'.
+        ft_name : string
+            The fringe tracker name.
+        ft_kmag : float
+            The Ks magnitude of the fringe tracker.
+        ft_hmag : float
+            The H magnitude of the fringe tracker.
+        ft_d : float
+            The diameter of the fringe tracker source, in mas.
+        ft_vis : float
+            The visibility of the fringe tracker source.
+        sc_name : string
+            The science object name.
+        sc_kmag : float
+            The Ks magnitude of the science object.
+        sc_d : float
+            The diameter of the science object, in mas.
+        sc_vis : float
+            The visibility of the science object.
+        sobj_x : float
+            The x offset of the sc from the ft, in mas.
+        sobj_y : float
+            The y offset of the sc from the ft, in mas.
+        ft_plx : float
+            The parallax of the fringe tracker, in arcsec.
+        spec_res : string
+            The spectral resolution, 'LOW', 'MED', or 'HIGH'.
+        ft_pol : string
+            The polarization of the fringe tracker, 'IN' or 'OUT'.
+        sc_pol : string
+            The polarization of the science object, 'IN' or 'OUT'.
+        ag_type : string
+            The adaptive optics type, 'ADAPT_OPT', 'ADAPT_OPT_TCCD', or 'IR_AO_OFFAXIS'.
+        gs_source : string
+            The guide star source, 'FT', 'SCIENCE', or 'SETUPFILE'.
+        gs_alpha : string
+            The R.A. of the guide star, in HH:MM:SS.SSS, 
+            only if gs_source is 'SETUPFILE'.
+        gs_delta : string
+            The Decl. of the guide star, in DD:MM:SS.SSS, 
+            only if gs_source is 'SETUPFILE'.
+        gs_plx : float
+            The parallax of the guide star, in arcsec, 
+            only if gs_source is 'SETUPFILE'.
+        gs_pma : float
+            The proper motion of R.A. of the guide star, in arcsec/yr, 
+            only if gs_source is 'SETUPFILE'.
+        gs_pmd : float
+            The proper motion of Decl. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_epoch : float
+            The epoch of the guide star coordinate, in year, better only use 2000.
+        gs_mag : float
+            The magnitude of the guide star in the optical or IR depending on 
+            the ag_type.
+        baseline : list
+            The baseline type, 'small', 'large', or 'UTs'.
+        vltitype : list
+            The VLTI type, 'snapshot', 'imaging', 'time-series', or 'astrometry'.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -264,6 +349,75 @@ class p2api_GRAVITY(object):
                                     vltitype=['snapshot']):
         '''
         Add acquisition template: GRAVITY_dual_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        ft_mode : string
+            The fringe tracker mode, 'AUTO', 1, 2, 7 or 9.
+        met_mode : string
+            The metrology mode, 'ON', 'FAINT', or 'OFF'.
+        ft_name : string
+            The fringe tracker name.
+        ft_kmag : float
+            The Ks magnitude of the fringe tracker.
+        ft_hmag : float
+            The H magnitude of the fringe tracker.
+        ft_d : float
+            The diameter of the fringe tracker source, in mas.
+        ft_vis : float
+            The visibility of the fringe tracker source.
+        sc_name : string
+            The science object name.
+        sc_kmag : float
+            The Ks magnitude of the science object.
+        sc_d : float
+            The diameter of the science object, in mas.
+        sc_vis : float
+            The visibility of the science object.
+        sobj_x : float
+            The x offset of the sc from the ft, in mas.
+        sobj_y : float
+            The y offset of the sc from the ft, in mas.
+        ft_plx : float
+            The parallax of the fringe tracker, in arcsec.
+        spec_res : string
+            The spectral resolution, 'LOW', 'MED', or 'HIGH'.
+        ft_pol : string
+            The polarization of the fringe tracker, 'IN' or 'OUT'.
+        sc_pol : string
+            The polarization of the science object, 'IN' or 'OUT'.
+        ag_type : string
+            The adaptive optics type, only 'ADAPT_OPT'.
+        gs_source : string
+            The guide star source, 'FT', 'SCIENCE', or 'SETUPFILE'.
+        gs_alpha : string
+            The R.A. of the guide star, in HH:MM:SS.SSS, 
+            only if gs_source is 'SETUPFILE'.
+        gs_delta : string
+            The Decl. of the guide star, in DD:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        gs_plx : float
+            The parallax of the guide star, in arcsec,
+            only if gs_source is 'SETUPFILE'.
+        gs_pma : float
+            The proper motion of R.A. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_pmd : float
+            The proper motion of Decl. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_epoch : float
+            The epoch of the guide star coordinate, in year, better only use 2000.
+        gs_mag : float
+            The magnitude of the guide star in the optical or IR depending on 
+            the ag_type.
+        baseline : list
+            The baseline type, 'small', 'large', or 'UTs'.
+        vltitype : list
+            The VLTI type, 'snapshot', 'imaging', 'time-series', or 'astrometry'.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -321,6 +475,27 @@ class p2api_GRAVITY(object):
                                         sky_y=2000):
         '''
         Add acquisition template: GRAVITY_single_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        dit : float
+            The DIT.
+        ndit_obj : int
+            The NDIT for the object.
+        ndit_sky : int
+            The NDIT for the sky.
+        hwpoff : list
+            The HWP offset, in degree.
+        obsseq : string
+            The observation sequence, e.g. 'O O S'.
+        sky_x : float
+            The x offset of the sky from the object, in mas.
+        sky_y : float
+            The y offset of the sky from the object, in mas.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -364,6 +539,31 @@ class p2api_GRAVITY(object):
                                  reloff_y=[0], sky_x=2000, sky_y=2000):
         '''
         Add acquisition template: GRAVITY_single_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        dit : float
+            The DIT.
+        ndit_obj : int
+            The NDIT for the object.
+        ndit_sky : int
+            The NDIT for the sky.
+        hwpoff : list
+            The HWP offset, in degree.
+        obsseq : string
+            The observation sequence, e.g. 'O O S'.
+        reloff_x : list
+            The x offset of the object from the current position, in mas.
+        reloff_y : list
+            The y offset of the object from the current position, in mas.
+        sky_x : float
+            The x offset of the sky from the object, in mas.
+        sky_y : float
+            The y offset of the sky from the object, in mas.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -401,6 +601,15 @@ class p2api_GRAVITY(object):
     def add_GRAVITY_dual_obs_swap(self, name, folder_name=None, ft_mode='AUTO'):
         '''
         Add acquisition template: GRAVITY_dual_obs_swap
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        ft_mode : string
+            The fringe tracker mode, 'AUTO', 1, 2, 7 or 9.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -439,6 +648,85 @@ class p2api_GRAVITY(object):
                                   baseline=['astrometric'], vltitype=['snapshot']):
         '''
         Add acquisition template: GRAVITY_dual_wide_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        ft_mode : string
+            The fringe tracker mode, 'AUTO', 1, 2, 7 or 9.
+        met_mode : string
+            The metrology mode, 'ON', 'FAINT', or 'OFF'.
+        ft_name : string
+            The fringe tracker name.
+        ft_mag : float
+            The Ks magnitude of the fringe tracker.
+        ft_d : float
+            The diameter of the fringe tracker source, in mas.
+        ft_vis : float
+            The visibility of the fringe tracker source.
+        ft_epoch : float
+            The epoch of the FT source coordinate, in year, better only use 2000.
+        sc_name : string
+            The science object name.
+        sc_mag : float
+            The Ks magnitude of the science object.
+        sc_d : float
+            The diameter of the science object, in mas.
+        sc_vis : float
+            The visibility of the science object.
+        sc_hmag : float
+            The H magnitude of the science object.
+        ft_hmag : float
+            The H magnitude of the fringe tracker.
+        ft_alpha : string
+            The R.A. of the fringe tracker, in HH:MM:SS.SSS.
+        ft_delta : string
+            The Decl. of the fringe tracker, in DD:MM:SS.SSS.
+        ft_plx : float
+            The parallax of the fringe tracker, in arcsec.
+        ft_pma : float
+            The proper motion of R.A. of the fringe tracker, in arcsec/yr.
+        ft_pmd : float
+            The proper motion of Decl. of the fringe tracker, in arcsec/yr.
+        sc_plx : float
+            The parallax of the science object, in arcsec.
+        spec_res : string
+            The spectral resolution, 'LOW', 'MED', or 'HIGH'.
+        ft_pol : string
+            The polarization of the fringe tracker, 'IN' or 'OUT'.
+        sc_pol : string
+            The polarization of the science object, 'IN' or 'OUT'.
+        gssource : string
+            The guide star source, 'FT', 'SCIENCE', or 'SETUPFILE'.
+        ag_alpha : string
+            The R.A. of the guide star, in HH:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        ag_delta : string
+            The Decl. of the guide star, in DD:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        ag_plx : float
+            The parallax of the guide star, in arcsec,
+            only if gs_source is 'SETUPFILE'.
+        ag_pma : float
+            The proper motion of R.A. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        ag_pmd : float
+            The proper motion of Decl. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        ag_epoch : float
+            The epoch of the guide star coordinate, in year, better only use 2000.
+        gs_mag : float
+            The magnitude of the guide star in the optical or IR depending on 
+            the ag_type.
+        ag_type : string
+            The adaptive optics type, 'ADAPT_OPT', 'ADAPT_OPT_TCCD', or 'IR_AO_OFFAXIS'.
+        baseline : list
+            The baseline type, 'small', 'large', or 'UTs'.
+        vltitype : list
+            The VLTI type, 'snapshot', 'imaging', 'time-series', or 'astrometry'.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -507,6 +795,63 @@ class p2api_GRAVITY(object):
                                       baseline=['astrometric'], vltitype=['snapshot']):
         '''
         Add acquisition template: GRAVITY_single_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        ft_mode : string
+            The fringe tracker mode, 'AUTO', 1, 2, 7 or 9.
+        met_mode : string
+            The metrology mode, 'ON', 'FAINT', or 'OFF'.
+        sc_name : string
+            The science object name.
+        sc_kmag : float
+            The Ks magnitude of the science object.
+        sc_hmag : float
+            The H magnitude of the science object.
+        sc_d : float
+            The diameter of the science object, in mas.
+        sc_vis : float
+            The visibility of the science object.
+        plx : float
+            The parallax of the science object, in arcsec.
+        spec_res : string
+            The spectral resolution, 'LOW', 'MED', or 'HIGH'.
+        ft_pol : string
+            The polarization of the fringe tracker, 'IN' or 'OUT'.
+        sc_pol : string
+            The polarization of the science object, 'IN' or 'OUT'.
+        ag_type : string
+            The adaptive optics type, 'ADAPT_OPT'.
+        gs_source : string
+            The guide star source, 'FT', 'SCIENCE', or 'SETUPFILE'.
+        gs_alpha : string
+            The R.A. of the guide star, in HH:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        gs_delta : string
+            The Decl. of the guide star, in DD:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        gs_plx : float
+            The parallax of the guide star, in arcsec,
+            only if gs_source is 'SETUPFILE'.
+        gs_pma : float
+            The proper motion of R.A. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_pmd : float
+            The proper motion of Decl. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_epoch : float
+            The epoch of the guide star coordinate, in year, better only use 2000.
+        gs_mag : float
+            The magnitude of the guide star in the optical or IR depending on 
+            the ag_type.
+        baseline : list
+            The baseline type, 'small', 'large', or 'UTs'.
+        vltitype : list
+            The VLTI type, 'snapshot', 'imaging', 'time-series', or 'astrometry'.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -563,6 +908,59 @@ class p2api_GRAVITY(object):
                                        baseline=['astrometric'], vltitype=['snapshot']):
         '''
         Add acquisition template: GRAVITY_single_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        ft_mode : string
+            The fringe tracker mode, 'AUTO', 1, 2, 7 or 9.
+        met_mode : string
+            The metrology mode, 'ON', 'FAINT', or 'OFF'.
+        sc_name : string
+            The science object name.
+        sc_kmag : float
+            The Ks magnitude of the science object.
+        sc_hmag : float
+            The H magnitude of the science object.
+        sc_d : float
+            The diameter of the science object, in mas.
+        sc_vis : float
+            The visibility of the science object.
+        plx : float
+            The parallax of the science object, in arcsec.
+        ft_pol : string
+            The polarization of the fringe tracker, 'IN' or 'OUT'.
+        ag_type : string
+            The adaptive optics type, 'ADAPT_OPT'.
+        gs_source : string
+            The guide star source, 'FT', 'SCIENCE', or 'SETUPFILE'.
+        gs_alpha : string
+            The R.A. of the guide star, in HH:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        gs_delta : string
+            The Decl. of the guide star, in DD:MM:SS.SSS,
+            only if gs_source is 'SETUPFILE'.
+        gs_plx : float
+            The parallax of the guide star, in arcsec,
+            only if gs_source is 'SETUPFILE'.
+        gs_pma : float
+            The proper motion of R.A. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_pmd : float
+            The proper motion of Decl. of the guide star, in arcsec/yr,
+            only if gs_source is 'SETUPFILE'.
+        gs_epoch : float
+            The epoch of the guide star coordinate, in year, better only use 2000.
+        gs_mag : float
+            The magnitude of the guide star in the optical or IR depending on 
+            the ag_type.
+        baseline : list
+            The baseline type, 'small', 'large', or 'UTs'.
+        vltitype : list
+            The VLTI type, 'snapshot', 'imaging', 'time-series', or 'astrometry'.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -614,6 +1012,27 @@ class p2api_GRAVITY(object):
                                           sky_y=2000):
         '''
         Add acquisition template: GRAVITY_single_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        dit : float
+            The DIT.
+        ndit_obj : int
+            The NDIT for the object.
+        ndit_sky : int
+            The NDIT for the sky.
+        hwpoff : list
+            The HWP offset, in degree.
+        obsseq : string
+            The observation sequence, e.g. 'O O S'.
+        sky_x : float
+            The x offset of the sky from the object, in mas.
+        sky_y : float
+            The y offset of the sky from the object, in mas.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -646,6 +1065,27 @@ class p2api_GRAVITY(object):
                                    sky_y=2000):
         '''
         Add acquisition template: GRAVITY_single_acq
+
+        Parameters
+        ----------
+        name : string
+            The OB name.
+        folder_name : string
+            The folder name.
+        dit : float
+            The DIT.
+        ndit_obj : int
+            The NDIT for the object.
+        ndit_sky : int
+            The NDIT for the sky.
+        hwpoff : list
+            The HWP offset, in degree.
+        obsseq : string
+            The observation sequence, e.g. 'O O S'.
+        sky_x : float
+            The x offset of the sky from the object, in mas.
+        sky_y : float
+            The y offset of the sky from the object, in mas.
         '''
         api = self.api
         folder, folderVersion = self.get_folder(folder_name)
@@ -745,6 +1185,13 @@ class p2api_GRAVITY(object):
     def create_rootFolder(self, name, overwrite=False):
         '''
         Create a root folder and work on it.
+
+        Parameters
+        ----------
+        name : string
+            Folder name.
+        overwrite : bool
+            Overwrite the existing OB if True.
         '''
         api = self.api
         containerId = self._runContainerId
@@ -843,6 +1290,11 @@ class p2api_GRAVITY(object):
     def set_rootFolder(self, name):
         '''
         Set a root folder and work on it.
+
+        Parameters
+        ----------
+        name : string
+            Folder name.
         '''
         api = self.api
         containerId = self._runContainerId
@@ -876,6 +1328,11 @@ class p2api_GRAVITY(object):
     def update_content(self, no_warning=False):
         '''
         Update the content of this run.
+
+        Parameters
+        ----------
+        no_warning : bool
+            Do not raise warning if True.
         '''
         api = self.api
         

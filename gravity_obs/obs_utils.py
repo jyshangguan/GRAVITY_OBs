@@ -496,6 +496,20 @@ def read_coordinate(ra, dec):
 def search_gaia_2table(ra, dec, radius):
     '''
     Search for Gaia info and convert them to J2000 into a table.
+
+    Parameters
+    ----------
+    ra : float or string
+        The right ascension (degree or HH:MM:SS).
+    dec : float or string
+        The declination (degree or DD:MM:SS).
+    radius : float
+        Searching radius in arcsec.
+    
+    Returns
+    -------
+    tb : Astropy Table
+        The table of the target.
     '''
     r = search_gaia_single(ra, dec, radius)
     

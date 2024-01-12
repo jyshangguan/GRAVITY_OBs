@@ -15,6 +15,23 @@ __all__ = ['load_gspread_url']
 def load_gspread_url(sheet_url, sheet_name=None, header_row=0, skip_rows=0):
     '''
     Load the Google Sheet to Astropy Table.
+
+    Parameters
+    ----------
+    sheet_url : str
+        The URL of the Google Sheet.
+    sheet_name : str, optional
+        The name of the worksheet. The default is None and the first worksheet 
+        is used.
+    header_row : int, optional
+        The row number of the header. The default is 0.
+    skip_rows : int, optional
+        The number of rows to skip after the header. The default is 0.
+    
+    Returns
+    -------
+    tb : astropy.table.Table
+        The table loaded from the Google Sheet.
     '''
     sht = gc.open_by_url(sheet_url)
   
