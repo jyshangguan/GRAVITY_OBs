@@ -5,6 +5,7 @@ from astropy.coordinates import CIRS, GCRS
 from astropy.coordinates import SkyCoord, Distance
 from astropy.table import Table
 from astroquery.xmatch import XMatch
+from astroquery.simbad import Simbad
  
 __all__ = ['coord_offset', 'cal_offset', 'cal_coord_motion', 'sc_offset', 
            'get_coord_plain', 'get_coord_colon', 'get_pos_current', 
