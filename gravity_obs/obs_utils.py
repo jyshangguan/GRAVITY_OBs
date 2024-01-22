@@ -280,6 +280,10 @@ def get_coord_colon(c):
         ra, dec = c.to_string('hmsdms').split(' ')
     except ValueError:
         return '00:00:00.000', '00:00:00.000'
+    
+    if ra == 'nan':
+        return '00:00:00.000', '00:00:00.000'
+
     ra_h = ra[:2]
     ra_m = ra[3:5]
     ra_s = float(ra[6:-1])
@@ -693,9 +697,15 @@ def xmatch_gaiadr3(t, radius, colRA, colDec):
             sourceID.append(t_f['DR3Name'][idx])
             ruwe.append(t_f['RUWE'][idx])
     t_f = t.copy()
+    add_colnames = ['ra_gaia_J2000', 'dec_gaia_J2000', 'ra_gaia_J2016', 'dec_gaia_J2016',
+                    'pma', 'pmd', 'plx', 'rv', 'G', 'Grp', 'Gbp', 'RUWE', 'sourceID']
     t_f.add_columns([ra_j2000, dec_j2000, ra_j2016, dec_j2016, pma, pmd, plx, rv, G, Grp, Gbp, ruwe, sourceID], 
-                   names=['ra_gaia_J2000', 'dec_gaia_J2000', 'ra_gaia_J2016', 'dec_gaia_J2016',
-                          'pma', 'pmd', 'plx', 'rv', 'G', 'Grp', 'Gbp', 'RUWE', 'sourceID'])
+                   names=add_colnames)
+    t_f['plx'][t_f['plx'] < 0] = 0
+
+    for cn in add_colnames[4:]:
+        if hasattr(t_f[cn].data, 'mask'):
+            t_f[cn][t_f[cn].data.mask] = 0
     return t_f
 
 

@@ -1,14 +1,17 @@
 import numpy as np
 from astropy.table import Table
 
-from google.colab import auth
-auth.authenticate_user()
-
-import gspread
-from google.auth import default
-creds, _ = default()
-
-gc = gspread.authorize(creds)
+try:
+    from google.colab import auth
+    auth.authenticate_user()
+    
+    from google.auth import default
+    creds, _ = default()
+    
+    import gspread
+    gc = gspread.authorize(creds)
+except:
+    gc = None
 
 __all__ = ['load_gspread_url']
 
@@ -33,6 +36,9 @@ def load_gspread_url(sheet_url, sheet_name=None, header_row=0, skip_rows=0):
     tb : astropy.table.Table
         The table loaded from the Google Sheet.
     '''
+    if gc is None:
+        raise ImportError('Not in Google Colab!')
+
     sht = gc.open_by_url(sheet_url)
   
     if sheet_name is None:

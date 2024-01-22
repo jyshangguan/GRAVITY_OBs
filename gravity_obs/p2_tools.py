@@ -31,16 +31,14 @@ def get_dit_med(ksc, tel='UT', verbose=True):
         ksc = ksc + 3
 
     if ksc < 6:
-        dit, ndit = 0.3, 320
+        dit, ndit = 1, 120
         
         if verbose:
             print(f'The source may be too bright ({ksc}) for MEDIUM!')
 
-    elif (ksc >= 6) & (ksc < 7):
-        dit, ndit = 1, 120
-    elif (ksc >= 7) & (ksc < 8.5):
+    elif (ksc >= 6) & (ksc < 7.5):
         dit, ndit = 3, 40
-    elif (ksc >= 8.5) & (ksc < 9.5):
+    elif (ksc >= 7.5) & (ksc < 8.5):
         dit, ndit = 10, 12
     else:
         dit, ndit = 30, 4
@@ -643,7 +641,7 @@ class p2api_GRAVITY(object):
                                   sc_d=0, sc_vis=1, sc_hmag=0, ft_hmag=0, ft_alpha=None, 
                                   ft_delta=None, ft_plx=0, ft_pma=0, ft_pmd=0, 
                                   sc_plx=0, spec_res='MED', ft_pol='IN', sc_pol='IN', 
-                                  gssource='SCIENCE', ag_alpha='00:00:00.000', ag_delta='00:00:00.000',
+                                  gs_source='SCIENCE', ag_alpha='00:00:00.000', ag_delta='00:00:00.000',
                                   ag_plx=0, gs_mag=0, ag_pma=0, ag_pmd=0, ag_epoch=2000, ag_type='ADAPT_OPT', 
                                   baseline=['astrometric'], vltitype=['snapshot']):
         '''
@@ -699,7 +697,7 @@ class p2api_GRAVITY(object):
             The polarization of the fringe tracker, 'IN' or 'OUT'.
         sc_pol : string
             The polarization of the science object, 'IN' or 'OUT'.
-        gssource : string
+        gs_source : string
             The guide star source, 'FT', 'SCIENCE', or 'SETUPFILE'.
         ag_alpha : string
             The R.A. of the guide star, in HH:MM:SS.SSS,
@@ -769,7 +767,7 @@ class p2api_GRAVITY(object):
             'INS.FT.POL': ft_pol,
             'INS.SPEC.POL': sc_pol,
             'COU.AG.TYPE': ag_type,
-            'COU.AG.GSSOURCE': gssource,
+            'COU.AG.GSSOURCE': gs_source,
             'COU.AG.ALPHA': ag_alpha,
             'COU.AG.DELTA': ag_delta,
             'COU.AG.PARALLAX': ag_plx,
