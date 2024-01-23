@@ -11,7 +11,7 @@ all = ['check_item_exist', 'create_OB', 'ob_add_target', 'ob_add_description',
 
 def get_dit_med(ksc, tel='UT', verbose=True):
     '''
-    Find the proper dit and ndit for MEDIUM (COMBINED).
+    Find the proper dit and ndit for MEDIUM (SPLIT).
 
     Parameters
     ----------
@@ -42,6 +42,46 @@ def get_dit_med(ksc, tel='UT', verbose=True):
         dit, ndit = 10, 12
     else:
         dit, ndit = 30, 4
+    
+    return dit, ndit
+
+
+def get_dit_low(ksc, tel='UT', verbose=True):
+    '''
+    Find the proper dit and ndit for LOW (SPLIT).
+
+    Parameters
+    ----------
+    ksc : float
+        The Ks magnitude of the source.
+    tel : string
+        The telescope name, 'UT' or 'AT'.
+    verbose : bool
+        Print the warning if True.
+    
+    Returns
+    -------
+    dit, ndit : float
+        The DIT and NDIT.
+    '''
+    if tel == 'AT':
+        ksc = ksc + 3
+
+    if ksc < 8.5:
+        dit, ndit = 0.3, 120
+        
+        if verbose:
+            print(f'The source may be too bright ({ksc}) for MEDIUM!')
+    
+    elif (ksc >= 8.5) & (ksc < 10):
+        dit, ndit = 1, 120
+
+    elif (ksc >= 10) & (ksc < 11):
+        dit, ndit = 3, 40
+    elif (ksc >= 11) & (ksc < 12.0):
+        dit, ndit = 10, 36
+    else:
+        dit, ndit = 30, 12
     
     return dit, ndit
 
