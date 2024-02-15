@@ -4,8 +4,14 @@ from astropy import units as u
 from astropy.coordinates import CIRS, GCRS
 from astropy.coordinates import SkyCoord, Distance
 from astropy.table import Table
-from astroquery.xmatch import XMatch
-from astroquery.simbad import Simbad
+
+try:
+    from astroquery.xmatch import XMatch
+    from astroquery.simbad import Simbad
+except ImportError:
+    XMatch = None
+    Simbad = None
+
  
 __all__ = ['coord_offset', 'cal_offset', 'cal_coord_motion', 'sc_offset', 
            'get_coord_plain', 'get_coord_colon', 'get_pos_current', 
@@ -565,6 +571,8 @@ def xmatch_gaiadr2(t, radius, colRA, colDec):
     t_f : Astropy Table
         The table of cross matched results.
     '''
+    assert XMatch is not None, 'The astroquery is not installed!'
+
     for cn in ['ra_gaia_J2000', 'dec_gaia_J2000', 'pma', 'pmd', 'plx', 'rv', 'G']:
         assert cn not in t.colnames, 'The input table has {} as a column!'.format(cn)
     
@@ -644,6 +652,8 @@ def xmatch_gaiadr3(t, radius, colRA, colDec):
     t_f : Astropy Table
         The table of cross matched results.
     '''
+    assert XMatch is not None, 'The astroquery is not installed!'
+
     for cn in ['ra_gaia_J2000', 'dec_gaia_J2000', 'pma', 'pmd', 'plx', 'rv', 'G']:
         assert cn not in t.colnames, 'The input table has {} as a column!'.format(cn)
     
@@ -731,6 +741,8 @@ def xmatch_2mass_psc(t, radius, colRA, colDec):
     t_f : Astropy Table
         The table of cross matched results.
     '''
+    assert XMatch is not None, 'The astroquery is not installed!'
+
     for cn in ['RAJ2000', 'DEJ2000', 'Jmag', 'Hmag', 'Kmag']:
         assert cn not in t.colnames, 'The input table has {} as a column!'.format(cn)
     
@@ -783,6 +795,8 @@ def search_simbad(name):
     pma, pmd : str
         Proper motion, units: arcsec / year
     '''
+    assert Simbad is not None, 'The astroquery is not installed!'
+
     result_table = Simbad.query_object(name)
     
     if result_table is None:

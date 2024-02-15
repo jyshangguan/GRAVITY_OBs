@@ -313,7 +313,7 @@ class oifits(object):
     
 
     def plot_t3_ruv(self, fiber='SC', polarization=None, units='Mlambda', 
-                    ax=None, plain=False, legend_kwargs=None, **kwargs):
+                    show_average=True, ax=None, plain=False, legend_kwargs=None, **kwargs):
         '''
         Plot the T3PHI as a function of the uv distance.
 
@@ -378,6 +378,14 @@ class oifits(object):
                 ax.errorbar(
                     uvdist[trl], t3phi[dit, trl, :], yerr=t3phierr[dit, trl, :], 
                     **kwargs_use)
+
+        if show_average:
+            t3ave = np.nanmean(t3phi[0, :, :], axis=-1)
+            t3std = np.nanstd(t3phi[0, :, :], axis=-1)
+            t3phi_text = '\n'.join([fr'{self._triangle[ii]}: {t3ave[ii]:.1f} +/- {t3std[ii]:.1f}$^\circ$' 
+                                    for ii in range(N_TRIANGLE)])
+            ax.text(0.45, 0.95, t3phi_text, fontsize=14, transform=ax.transAxes, 
+                    ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
 
         if not plain:
             if units == 'Mlambda':

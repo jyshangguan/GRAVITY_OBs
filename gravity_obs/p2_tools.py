@@ -1,6 +1,10 @@
 import numpy as np
 from datetime import datetime
-import p2api
+
+try:
+    import p2api
+except ImportError:
+    p2api = None
 
 now = datetime.now()
 dt_string = now.strftime("%Y-%m-%dT%H:%M:%S")
@@ -223,6 +227,8 @@ class p2api_GRAVITY(object):
         password : string
             Password.
         '''
+        assert p2api is not None, 'Cannot find p2api!'
+
         api = p2api.ApiConnection('production', username, password)
         runList = api.getRuns()[0]
         pidList = [r['progId'] for r in runList]
