@@ -384,8 +384,8 @@ class oifits(object):
             t3std = np.nanstd(t3phi[0, :, :], axis=-1)
             t3phi_text = '\n'.join([fr'{self._triangle[ii]}: {t3ave[ii]:.1f} +/- {t3std[ii]:.1f}$^\circ$' 
                                     for ii in range(N_TRIANGLE)])
-            ax.text(0.45, 0.95, t3phi_text, fontsize=14, transform=ax.transAxes, 
-                    ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+            ax.text(0.45, 0.95, t3phi_text, fontsize=14, transform=ax.transAxes, ha='left', va='top', 
+                    bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
 
         if not plain:
             if units == 'Mlambda':
