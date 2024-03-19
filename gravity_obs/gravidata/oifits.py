@@ -118,17 +118,17 @@ class oifits(object):
         assert units in ['Mlambda', 'per mas', 'm'], 'units must be Mlambda, per mas, or m.'
 
         extver = self.get_extver(fiber, polarization)
-        u1coord = self._hdul['OI_T3', extver].data['U1COORD'] 
-        v1coord = self._hdul['OI_T3', extver].data['V1COORD']
-        u2coord = self._hdul['OI_T3', extver].data['U2COORD'] 
-        v2coord = self._hdul['OI_T3', extver].data['V2COORD']
+        u1coord = self._hdul['OI_T3', extver].data['U1COORD'].reshape(-1, N_TRIANGLE)
+        v1coord = self._hdul['OI_T3', extver].data['V1COORD'].reshape(-1, N_TRIANGLE)
+        u2coord = self._hdul['OI_T3', extver].data['U2COORD'].reshape(-1, N_TRIANGLE)
+        v2coord = self._hdul['OI_T3', extver].data['V2COORD'].reshape(-1, N_TRIANGLE)
         
         if units != 'm':
             wave = self.get_wavelength(fiber, polarization, units='micron')
-            u1coord = u1coord[:, np.newaxis] / wave[np.newaxis, :]
-            v1coord = v1coord[:, np.newaxis] / wave[np.newaxis, :]
-            u2coord = u2coord[:, np.newaxis] / wave[np.newaxis, :]
-            v2coord = v2coord[:, np.newaxis] / wave[np.newaxis, :]
+            u1coord = u1coord[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :]
+            v1coord = v1coord[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :]
+            u2coord = u2coord[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :]
+            v2coord = v2coord[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :]
             
             if units == 'per mas':
                 u1coord = u1coord * np.pi / 180. / 3600 * 1e3
@@ -216,13 +216,13 @@ class oifits(object):
         assert units in ['Mlambda', 'per mas', 'm'], 'units must be Mlambda, per mass, or m.'
 
         extver = self.get_extver(fiber, polarization)
-        ucoord = self._hdul['OI_VIS', extver].data['UCOORD'] 
-        vcoord = self._hdul['OI_VIS', extver].data['VCOORD']
+        ucoord = self._hdul['OI_VIS', extver].data['UCOORD'].reshape(-1, N_BASELINE)
+        vcoord = self._hdul['OI_VIS', extver].data['VCOORD'].reshape(-1, N_BASELINE)
         
         if units != 'm':
             wave = self.get_wavelength(fiber, polarization, units='micron')
-            ucoord = ucoord[:, np.newaxis] / wave[np.newaxis, :]
-            vcoord = vcoord[:, np.newaxis] / wave[np.newaxis, :]
+            ucoord = ucoord[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :]
+            vcoord = vcoord[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :]
             
             if units == 'per mas':
                 ucoord = ucoord * np.pi / 180. / 3600 * 1e3
