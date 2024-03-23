@@ -4,6 +4,7 @@ from astropy import units as u
 from astropy.coordinates import CIRS, GCRS
 from astropy.coordinates import SkyCoord, Distance
 from astropy.table import Table
+import bisect
 
 try:
     from astroquery.xmatch import XMatch
@@ -810,4 +811,82 @@ def search_simbad(name):
     ra_hms, dec_dms = get_coord_colon(c)
     return ra_hms, dec_dms, pma, pmd
     
+
+def get_dit(k, res='med', pol='split', tel='UT', wide=False):
+    '''
+    Get the optimal DIT for a given target magnitude.
+
+    Parameters
+    ----------
+    k : float
+        The magnitude of the target.
+    res : string (default: 'med')
+        The resolution of the instrument, either 'med' or 'low'.
+    pol : string (default: 'split')
+        The polarization mode, either 'split' or 'combined'.
+    tel : string (default: 'UT')
+        The telescope, either 'UT' or 'AT'.
+    wide : bool (default: False)
+        Use the G-wide mode if True.
+
+    Returns
+    -------
+    dit : float
+        The optimal DIT.
+    '''
+    opt_med = {
+        1: 5.5,
+        3: 7.0,
+        10: 8.0,
+        30: 11,
+    }
     
+    opt_low = {
+        0.3: 7.5,
+        1: 9.0,
+        3: 10.5,
+        10: 11.5,
+        30: 15.0,
+    }
+
+    if res == 'med':
+        opt_dict = opt_med
+        k_bright_limit = 4
+    elif res == 'low':
+        opt_dict = opt_low
+        k_bright_limit = 7
+    else:
+        raise ValueError('The res should be either med or low!')
+
+    if pol == 'split':
+        pass
+    elif pol == 'combined':
+        k = k - 0.8
+    else:
+        raise ValueError('The pol should be either split or combined!')
+    
+    if tel == 'UT':
+        pass
+    elif tel == 'AT':
+        k = k + 2.5
+    else:
+        raise ValueError('The tel should be either UT or AT!')
+    
+    if wide:
+        k = k + 1
+    
+    if k < k_bright_limit:
+        raise ValueError(f'The target is too bright for {res}, {pol}, {tel}!')
+
+    dit = np.array(list(opt_dict.keys()))
+    mags = np.array(list(opt_dict.values()))
+
+    idx = bisect.bisect(mags, k)
+
+    if idx == len(mags):
+        idx -= 1
+
+    if dit[idx] == 0.3:
+        return 0.3
+    else:
+        return int(dit[idx])
