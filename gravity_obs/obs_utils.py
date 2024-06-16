@@ -218,6 +218,28 @@ def coord_offset(delta_ra, delta_dec, c0, frame='icrs'):
     return c_t
 
 
+def cal_pa_sep(offset):
+    '''
+    Calculate the PA and separation of the offset from the input (dx, dy)
+
+    Parameters
+    ----------
+    offset : tuple
+        The offset of the target in linear scale, (dx, dy).
+
+    Returns
+    -------
+    pa : float
+        The position angle of the offset, units: degree.
+    sep : float
+        The separation of the offset, units: the input unit.
+    '''
+    dx, dy = offset
+    pa = np.arctan2(dx, dy) * 180/np.pi
+    sep = np.sqrt(dx**2 + dy**2)
+    return pa, sep
+
+
 def cal_offset(c, c_ref, units='mas'):
     """
     Calculate the coordinate offset betweenn the two coordinates.
@@ -663,54 +685,92 @@ def xmatch_gaiadr3(t, radius, colRA, colDec):
                        max_distance=radius * u.arcsec, colRA1=colRA, colDec1=colDec)
     
     ra_j2000 = []
+    ra_j2000_err = []
     dec_j2000 = []
+    dec_j2000_err = []
     ra_j2016 = []
+    ra_j2016_err = []
     dec_j2016 = []
+    dec_j2016_err = []
     pma = []
+    pma_err = []
     pmd = []
+    pmd_err = []
     plx = []
+    plx_err = []
     rv = []
+    rv_err = []
     G = []
+    G_err = []
     Grp = []
+    Grp_err = []
     Gbp = []
+    Gbp_err = []
     sourceID = []
     ruwe = []
     for loop in range(len(t)):
         fltr = np.isclose(t_o[colRA], t[colRA][loop]) & np.isclose(t_o[colDec], t[colDec][loop])
         if np.sum(fltr) == 0:
             ra_j2000.append(np.nan)
+            ra_j2000_err.append(np.nan)
             dec_j2000.append(np.nan)
+            dec_j2000_err.append(np.nan)
             ra_j2016.append(np.nan)
+            ra_j2016_err.append(np.nan)
             dec_j2016.append(np.nan)
+            dec_j2016_err.append(np.nan)
             pma.append(np.nan)
+            pma_err.append(np.nan)
             pmd.append(np.nan)
+            pmd_err.append(np.nan)
             plx.append(np.nan)
+            plx_err.append(np.nan)
             rv.append(np.nan)
+            rv_err.append(np.nan)
             G.append(np.nan)
+            G_err.append(np.nan)
             Grp.append(np.nan)
+            Grp_err.append(np.nan)
             Gbp.append(np.nan)
+            Gbp_err.append(np.nan)
             sourceID.append(np.nan)
             ruwe.append(np.nan)
         else:
             t_f = t_o[fltr]
             idx = np.argmin(t_f['angDist'])
             ra_j2000.append(t_f['RAJ2000'][idx])
+            ra_j2000_err.append(t_f['e_RAJ2000'][idx])
             dec_j2000.append(t_f['DEJ2000'][idx])
+            dec_j2000_err.append(t_f['e_DEJ2000'][idx])
             ra_j2016.append(t_f['RAdeg'][idx])
+            ra_j2016_err.append(t_f['e_RAdeg'][idx])
             dec_j2016.append(t_f['DEdeg'][idx])
+            dec_j2016_err.append(t_f['e_DEdeg'][idx])
             pma.append(t_f['pmRA'][idx])
+            pma_err.append(t_f['e_pmRA'][idx])
             pmd.append(t_f['pmDE'][idx])
+            pmd_err.append(t_f['e_pmDE'][idx])
             plx.append(t_f['Plx'][idx])
+            plx_err.append(t_f['e_Plx'][idx])
             rv.append(t_f['RV'][idx])
+            rv_err.append(t_f['e_RV'][idx])
             G.append(t_f['Gmag'][idx])
+            G_err.append(t_f['e_Gmag'][idx])
             Grp.append(t_f['RPmag'][idx])
+            Grp_err.append(t_f['e_RPmag'][idx])
             Gbp.append(t_f['BPmag'][idx])
+            Gbp_err.append(t_f['e_BPmag'][idx])
             sourceID.append(t_f['DR3Name'][idx])
             ruwe.append(t_f['RUWE'][idx])
     t_f = t.copy()
-    add_colnames = ['ra_gaia_J2000', 'dec_gaia_J2000', 'ra_gaia_J2016', 'dec_gaia_J2016',
-                    'pma', 'pmd', 'plx', 'rv', 'G', 'Grp', 'Gbp', 'RUWE', 'sourceID']
-    t_f.add_columns([ra_j2000, dec_j2000, ra_j2016, dec_j2016, pma, pmd, plx, rv, G, Grp, Gbp, ruwe, sourceID], 
+    add_colnames = ['ra_gaia_J2000', 'ra_gaia_J2000_err', 'dec_gaia_J2000', 'dec_gaia_J2000_err', 
+                    'ra_gaia_J2016', 'ra_gaia_J2016_err', 'dec_gaia_J2016', 'dec_gaia_J2016_err',
+                    'pma', 'pma_err', 'pmd', 'pmd_err', 'plx', 'plx_err', 'rv', 'rv_err', 
+                    'G', 'G_err', 'Grp', 'Grp_err', 'Gbp', 'Gbp_err', 'RUWE', 'sourceID']
+    t_f.add_columns([ra_j2000, ra_j2000_err, dec_j2000, dec_j2000_err, 
+                     ra_j2016, ra_j2016_err, dec_j2016, dec_j2016_err, 
+                     pma, pma_err, pmd, pmd_err, plx, plx_err, rv, rv_err, 
+                     G, G_err, Grp, Grp_err, Gbp, Gbp_err, ruwe, sourceID], 
                    names=add_colnames)
     t_f['plx'][t_f['plx'] < 0] = 0
 
