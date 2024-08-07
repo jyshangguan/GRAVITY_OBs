@@ -1,3 +1,5 @@
+import numpy as np
+
 N_TELESCOPE = 4
 N_BASELINE = 6
 N_TRIANGLE = 4
@@ -22,6 +24,16 @@ triangle_names = {
     'AT': ['A432', 'A431', 'A421', 'A321'],
     'GV': ['G123', 'G124', 'G134', 'G234'],
 }
+
+
+t2b_matrix = np.array([[1, -1, 0, 0],
+                       [1, 0, -1, 0],
+                       [1, 0, 0, -1],
+                       [0, 1, -1, 0],
+                       [0, 1, 0, -1],
+                       [0, 0, 1, -1]])
+
+lambda_met = 1.908  # micron
 
 
 def set_docstring(doc_template, data_name):

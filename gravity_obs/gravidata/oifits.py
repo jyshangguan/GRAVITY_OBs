@@ -1,10 +1,13 @@
 import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from astropy.utils.decorators import lazyproperty
 from .gravi_utils import N_BASELINE, N_TRIANGLE, N_TELESCOPE
 from .gravi_utils import baseline_names, telescope_names, triangle_names
-from .astro_utils import phase_model
+from .gravi_utils import t2b_matrix, lambda_met
+from .astro_utils import (phase_model, fit_opd_closure, matrix_opd, solve_offset,
+                          grid_search_opd)
 
 
 class SciVisFits(object):
@@ -22,6 +25,12 @@ class SciVisFits(object):
         self._hdul = fits.open(filename)
         header = self._hdul[0].header
         self._header = header
+
+        self._arcfile = header.get('ARCFILE', None)
+        if self._arcfile is not None:
+            self._arctime = self._arcfile.split('.')[1]
+        else:
+            self._arctime = None
 
         self._object = header.get('OBJECT', None)
 
@@ -964,6 +973,21 @@ class AstroFits(object):
             self.set_telescope('GV')
 
 
+    def correct_met_jump(self, fringe_tel):
+        '''
+        Correct the metrology phase jump.
+
+        Parameters
+        ----------
+        opd_tel : array
+            The correction values add to OPD_DISP, in the unit of fringe.
+            The input value is telescope based, [UT4, UT3, UT2, UT1].
+        '''
+        wave = self.get_wavelength(units='micron')
+        corr_tel = np.array(fringe_tel)[:, np.newaxis] * 2*np.pi * (1 - lambda_met / wave)[np.newaxis, :]
+        self._opdDisp_corr = np.dot(t2b_matrix, corr_tel)
+
+
     def get_extver(self, polarization=None):
         '''
         Get the extver of the OIFITS HDU. The first digit is the fiber type 
@@ -1011,18 +1035,96 @@ class AstroFits(object):
         return f1f2
 
 
-    def get_opdDisp(self, polarization=None, fromdata=False):
+    def get_gdelay(self, polarization=None, fromdata=False, field='GDELAY_BOOT'):
         '''
+        Get the GDELAY_BOOT.
         '''
         extver = self.get_extver(polarization)
 
-        if hasattr(self, f'_opddisp_{extver}') & (not fromdata):
-            return self.__getattribute__(f'_opddisp_{extver}')
+        if hasattr(self, f'_gdelay_{extver}') & (not fromdata):
+            return self.__getattribute__(f'_gdelay_{extver}')
+        
+        gdelay = self._hdul['OI_VIS', extver].data[field].reshape(-1, N_BASELINE)
+
+        self.__setattr__(f'_gdelay_{extver}', gdelay)
+
+        return gdelay
+
+
+    def get_offset(self, opdzp, polarization=None, method='leastsq', fromdata=False, 
+                   kws_opd_visref={}, plot=False, **kwargs):
+        '''
+        Get the astrometry offset.
+        '''
+        opd = self.get_opd_visref(polarization=polarization, fromdata=fromdata, 
+                                  opdzp=opdzp, **kws_opd_visref)
+        uvcoord = self.get_vis_uvcoord(polarization=polarization, units='m', 
+                                       fromdata=fromdata)
+
+        if method == 'leastsq':
+            uvcoord = np.array(uvcoord).swapaxes(0, 1)
+            offset = np.mean(solve_offset(opd, uvcoord), axis=0)
+            chi2_grid = None
+            chi2_grid_zoom = None
+
+        elif method == 'grid':
+            if 'ra_init' not in kwargs:
+                kwargs['ra_init'] = self._sobj_x
+            if 'dec_init' not in kwargs:
+                kwargs['dec_init'] = self._sobj_y
+            
+            res = grid_search_opd(opd, uvcoord, plot=plot, **kwargs)
+
+            offset = np.array([res['ra_best'], res['dec_best']])
+            chi2_grid = res['chi2_grid']
+            chi2_grid_zoom = res['chi2_grid_zoom']
+        else:
+            raise ValueError(f'The method {method} is not supported!')
+        
+        if self._swap:
+            offset *= -1
+
+        res = dict(offset=offset, chi2_grid=chi2_grid, chi2_grid_zoom=chi2_grid_zoom)
+
+        return res
+
+
+    def get_opd_visref(self, polarization=None, fromdata=False, opdzp=None, opd_lim=3000, 
+                       step=1, zoom=20, iterations=2, progress=False, plot=False):
+        '''
+        Calculate the OPD from the VISREF data.
+        '''
+        extver = self.get_extver(polarization)
+        visref = self.get_visref(polarization, fromdata=fromdata, opdzp=opdzp)
+        visphi = np.angle(visref)
+        wave = self.get_wavelength(polarization=polarization, units='micron')
+
+        if progress:
+            iterate = tqdm(range(visphi.shape[0]))
+        else:
+            iterate = range(visphi.shape[0])
+
+        opd = np.array([
+            fit_opd_closure(visphi[dit, :, :], wave, opd_lim=opd_lim, step=step, 
+                            zoom=zoom, iterations=iterations, plot=plot)
+            for dit in iterate])
+        return opd
+
+
+    def get_opdDisp(self, polarization=None, fromdata=False):
+        '''
+        Get the OPD_DISP data from the OIFITS file.
+        '''
+        extver = self.get_extver(polarization)
+        attr_name = f'_opddisp_{extver}'
+
+        if hasattr(self, attr_name) & (not fromdata):
+            return self.__getattribute__(attr_name)
         
         opddisp = self._hdul['OI_VIS', extver].data['OPD_DISP']
         opddisp = np.reshape(opddisp, (-1, N_BASELINE, opddisp.shape[1]))
 
-        self.__setattr__(f'_opddisp_{extver}', opddisp)
+        self.__setattr__(attr_name, opddisp)
 
         return opddisp
     
@@ -1215,7 +1317,7 @@ class AstroFits(object):
         return visdata, viserr
 
 
-    def get_visref(self, polarization=None, fromdata=False, per_dit=False, normalized=False):
+    def get_visref(self, polarization=None, fromdata=False, opdzp=None, per_dit=False, normalized=False):
         '''
         Get the phase referenced VISDATA (VISREF) for astrometry measurement.
         '''
@@ -1223,22 +1325,35 @@ class AstroFits(object):
 
         attr_name = f'_visref_{extver}'
 
+        if hasattr(self, '_opdDisp_corr'):
+            attr_name += '_metcorr'
+
         if per_dit:
             attr_name += '_perdit'
         
         if normalized:
             attr_name += '_normalized'
 
+        if opdzp is not None:
+            attr_name += f'_zpcorr'
+
         if hasattr(self, attr_name) & (not fromdata):
             return self.__getattribute__(attr_name)
         
-        wave = self.get_wavelength(polarization=polarization, fromdata=fromdata)
+        wave = self.get_wavelength(polarization=polarization, fromdata=fromdata, units='micron')
         visdata, _ = self.get_visdata(polarization=polarization, fromdata=fromdata)
         phaseref= self.get_phaseref(polarization=polarization, fromdata=fromdata)
         opdDisp = self.get_opdDisp(polarization=polarization, fromdata=fromdata)
         opdMetCorr = self.get_opdMetCorr(polarization=polarization, fromdata=fromdata)
 
         visref = visdata * np.exp(1j * (phaseref - 2*np.pi / wave * (opdDisp + opdMetCorr) * 1e6))
+
+        if hasattr(self, '_opdDisp_corr'):
+            visref *= np.exp(1j * self._opdDisp_corr)
+
+        if opdzp is not None:
+            v_opd = matrix_opd(opdzp, wave).T
+            visref *= np.conj(v_opd[np.newaxis, :, :])
 
         if per_dit:
             visref /= self._dit
@@ -1352,7 +1467,7 @@ class AstroFits(object):
             fig, axs = plt.subplots(N_BASELINE, 1, figsize=(12, 6), sharex=True, 
                                     sharey=True)
 
-        wave = self.get_wavelength(polarization)
+        wave = self.get_wavelength(polarization, units='micron')
 
         if 'alpha' not in kwargs:
             kwargs['alpha'] = 0.5
@@ -1418,7 +1533,7 @@ class AstroFits(object):
             fig, axs = plt.subplots(N_BASELINE, 1, figsize=(12, 6), sharex=True, 
                                     sharey=True)
 
-        wave = self.get_wavelength(polarization)
+        wave = self.get_wavelength(polarization, units='micron')
 
         if 'alpha' not in kwargs:
             kwargs['alpha'] = 0.5
