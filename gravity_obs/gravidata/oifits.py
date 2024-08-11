@@ -216,8 +216,7 @@ class AstroFits(GraviFits):
 
         # Set the uv coordinates
         self._uvcoord_m = self.get_uvcoord_vis(units='m')
-        self._uvcoord_permas = self.get_uvcoord_vis(units='permas')
-        self._uvcoord_Mlambda = self.get_uvcoord_vis(units='Mlambda')
+        self._uvcoord_Mlambda_sc = self.get_uvcoord_vis(units='Mlambda')
 
         # Visibility data
         for p in self._pol_list:
@@ -239,7 +238,7 @@ class AstroFits(GraviFits):
             pols = [polarization]
 
         for p in pols:
-            u, v = self._uvcoord_Mlambda
+            u, v = self._uvcoord_Mlambda_sc
             phase = phase_model(ra, dec, u, v)
             model = np.exp(1j * phase)
             visdata = getattr(self, f'_visdata_1{p}')
@@ -271,7 +270,7 @@ class AstroFits(GraviFits):
         visdata = getattr(self, f'_visdata_{extver}')
 
         if met_jump is not None:
-            corr_tel = np.array(met_jump)[:, np.newaxis] * 2*np.pi * (1 - lambda_met / self._wave)[np.newaxis, :]
+            corr_tel = np.array(met_jump)[:, np.newaxis] * 2*np.pi * (1 - lambda_met / self._wave_sc)[np.newaxis, :]
             opdDisp_corr = np.dot(t2b_matrix, corr_tel)
             visdata *= np.exp(1j * opdDisp_corr)
 
@@ -298,6 +297,46 @@ class AstroFits(GraviFits):
 
         visphi = np.angle(vd1 * np.conj(vd2))
         return visphi
+
+
+    def flag_visdata(
+            self, 
+            polarization : int = None, 
+            dit : Union[int, List[int]] = None, 
+            baseline : Union[int, List[int]] = None):
+        '''
+        Flag the visibility data.
+        '''
+        if polarization is None:
+            pols = self._pol_list
+        else:
+            pols = [polarization]
+
+        for p in pols:
+            extver = self.get_extver(fiber='SC', polarization=p)
+            visdata = getattr(self, f'_visdata_{extver}')
+
+            if dit is None:
+                dits = range(visdata.shape[0])
+            elif isinstance(dit, int):
+                dits = [dit]
+            elif isinstance(dit, list):
+                dits = dit
+            else:
+                raise ValueError('dit must be an integer or a list of integers.')
+                
+            if baseline is None:
+                baselines = range(visdata.shape[1])
+            elif isinstance(baseline, int):
+                baselines = [baseline]
+            elif isinstance(baseline, list):
+                baselines = baseline
+            else:
+                raise ValueError('baseline must be an integer or a list of integers.')
+
+            for d in dits:
+                for b in baselines:
+                    visdata[d, b, :].mask = True
 
 
     def get_opdDisp(self, polarization=None):
@@ -379,26 +418,22 @@ class AstroFits(GraviFits):
             COMBINED and SPLIT, respectively.
         units : str, optional
             The units of the uv coordinates. Either Mlambda, permas, or m.
-            Mlambda is million lambda, permas is per milliarcsecond, and m is meter.
+            Mlambda is million lambda and m is meter.
         
         Returns
         -------
         ucoord, vcoord : arrays
             The uv coordinate of the baselines, (NDIT, NBASELINE, NCHANNEL).
         '''
-        assert units in ['Mlambda', 'permas', 'm'], 'units must be Mlambda, per mass, or m.'
+        assert units in ['Mlambda', 'm'], 'units must be Mlambda or m.'
 
         ucoord = self.get_vis('UCOORD', fiber='SC', polarization=polarization)
         vcoord = self.get_vis('VCOORD', fiber='SC', polarization=polarization)
         
-        if units != 'm':
+        if units == 'Mlambda':
             wave = self.get_wavelength(units='micron')
             ucoord = ucoord / wave[np.newaxis, np.newaxis, :]
             vcoord = vcoord / wave[np.newaxis, np.newaxis, :]
-            
-            if units == 'permas':
-                ucoord = ucoord * np.pi / 180. / 3600 * 1e3
-                vcoord = vcoord * np.pi / 180. / 3600 * 1e3
 
         return ucoord, vcoord
 
@@ -411,16 +446,20 @@ class AstroFits(GraviFits):
         ----------
         units : str, optional
             The units of the uv distance. Either Mlambda, permas, or m.
-            Mlambda is million lambda, permas is per milliarcsecond, and m is meter.
+            Mlambda is million lambda and m is meter.
         
         Returns
         -------
         uvdist : array
             The uv distance of the baselines, (NDIT, NBASELINE, NCHANNEL).
         '''
-        assert units in ['Mlambda', 'permas', 'm'], 'units must be Mlambda, per mass, or m.'
+        assert units in ['Mlambda', 'm'], 'units must be Mlambda or m.'
 
-        ucoord, vcoord = getattr(self, f'_uvcoord_{units}')
+        if units == 'm':
+            ucoord, vcoord = self._uvcoord_m
+        else:
+            ucoord, vcoord = self._uvcoord_Mlambda_sc
+
         uvdist = np.sqrt(ucoord**2 + vcoord**2)
 
         return uvdist
@@ -1100,8 +1139,6 @@ class AstroList(GraviList):
         self._index_unswap = []
         self._index_swap = []
         for i, f in enumerate(files):
-            self._logger.info(f'Processing {f}')
-
             oi = AstroFits(f, ignore_flag, per_exp, normalize)
             self._datalist.append(oi)
 
@@ -1110,9 +1147,131 @@ class AstroList(GraviList):
             else:
                 self._index_unswap.append(i)
 
+            self._logger.info(f'[AstroList] processing [{i}] {oi._arctime}, swap: {oi._swap}')
+
         self._pol_list = self._datalist[0]._pol_list
         self._sobj_x = self._datalist[0]._sobj_x
         self._sobj_y = self._datalist[0]._sobj_y
+
+
+    def astrometry_swap(self, plot=True, report_name=None):
+        '''
+        The main function to measure astrometry and metrology zero point from 
+        the swap data.
+        '''
+        assert len(self._index_unswap) > 0, 'There is no unswap data in the list!'
+        assert len(self._index_swap) > 0, 'There is no swap data in the list!'
+
+        if report_name is not None:
+            pdf = PdfPages(report_name)
+        else:
+            pdf = None
+
+
+        # Search for astrometry using the phase method
+        self._logger.info('Grid search for astrometry solution')
+        res = self.grid_search_phase(plot=False)
+        txt = f"({res['ra_best_zoom']:.2f}, {res['dec_best_zoom']:.2f})"
+        self._logger.info(f'First-run grid search: {txt}')
+
+
+        # Measure metrology zero point
+        self._logger.info('Measure metrology zero point')
+        self.compute_metzp(res['ra_best'], res['dec_best'], plot=plot, pdf=pdf)
+
+
+        # Correct the metrology zero point
+        self._logger.info('Correct the metrology zeropoint')
+        self.correct_metzp()
+
+
+        # Plot the phase to evaluate the data correction
+        self._logger.info('Plotting the metrology zeropoint corrected data')
+        for loop, oi in enumerate(self):
+            fig, axs = plt.subplots(1, oi._npol, figsize=(7*oi._npol, 7))
+            axs = np.atleast_1d(axs)
+            fig.suptitle(f'METZP corrected [{loop}]: {oi._arcfile}', fontsize=18)
+
+            for i, p in enumerate(self._pol_list):
+                oi.plot_visphi(polarization=p, ax=axs[i])
+                axs[i].text(0.05, 0.95, f'P{p}', fontsize=16, 
+                            transform=axs[i].transAxes, va='top', ha='left',
+                            bbox=dict(facecolor='w', edgecolor='none', alpha=0.5))
+
+            if pdf is not None:
+                pdf.savefig(fig)
+                plt.close(fig)
+
+
+        # Plot the chi2 map, grid search solution, and group delay astrometry solutions
+        self._logger.info('Final grid search for astrometry solution')
+
+        if plot:
+            fig, axs = plt.subplots(1, 3, figsize=(21, 7))
+            fig.suptitle('Astrometry results', fontsize=18)
+
+            axs_grid = axs[:2]
+        else:
+            axs_grid = None
+
+        res = self.grid_search_phase(plot=plot, axs=axs_grid)
+        self._ra_best = res['ra_best_zoom']
+        self._dec_best = res['dec_best_zoom']
+        self._sobj_x_fit = self._sobj_x + res['ra_best_zoom']
+        self._sobj_y_fit = self._sobj_y + res['dec_best_zoom']
+        txt = f"({res['ra_best_zoom']:.2f}, {res['dec_best_zoom']:.2f})"
+        self._logger.info(f'Final grid search: {txt}')
+        self._logger.info(f'Measured FT-SC vector: ({self._sobj_x_fit:.2f}, {self._sobj_y_fit:.2f})')
+
+        
+        # Calculate the group delay astrometry
+        self._logger.info('Calculate the group delay astrometry')
+        offsets_gd = self.gdelay_astrometry(plot=plot, pdf=pdf)
+
+        if plot:
+            ax = axs[2]
+            colors = ['C0', 'C2']
+            markers = ['+', 'x']
+            for p in range(offsets_gd.shape[-1]):
+                for i in range(offsets_gd.shape[0]):
+                    if i == 0:
+                        label = f'GD P{self._pol_list[p]}'
+                    else:
+                        label = None
+
+                    ax.plot(offsets_gd[i, 0, p], offsets_gd[i, 1, p], color=colors[p], ls='none', 
+                            marker=markers[p], ms=6, lw=2, label=label)
+
+            ax.plot(res['ra_best_zoom'], res['dec_best_zoom'], marker='x', ms=15, color='C3')
+            ax.legend(fontsize=16, loc='upper right', handlelength=1)
+        
+            # Expand the panel by 2 times for the current axis and make the aspect ratio equal
+            ax = axs[2]
+            xlim =  ax.get_xlim()
+            ylim =  ax.get_ylim()
+        
+            alim = np.max([np.abs(np.diff(xlim)), np.abs(np.diff(ylim))]) * 0.8
+            xcent = np.mean(xlim)
+            ycent = np.mean(ylim)
+            ax.set_xlim([xcent - alim, xcent + alim])
+            ax.set_ylim([ycent - alim, ycent + alim])
+            ax.set_aspect('equal')
+            ax.set_title('Zoom in astrometry', fontsize=16)
+            ax.minorticks_on()
+            ax.set_xlabel(r'$\Delta$RA (mas)', fontsize=18)
+
+            if pdf is not None:
+                pdf.savefig(fig)
+                plt.close(fig)
+
+        if pdf is not None:
+            pdf.close()
+        
+        self._logger.info('OPD_MET_ZERO_FC: ')
+        for i, p in enumerate(self._pol_list):
+            self._logger.info(', '.join([f'{v:.2f}' for v in self._fczp[:, i]]))
+
+        self._logger.info("Astrometry swap finished!")
 
 
     def chi2_phase(self, ra, dec):
@@ -1128,7 +1287,7 @@ class AstroList(GraviList):
         gooddata1 = []
         for oi in self[self._index_unswap]:
             for p in self._pol_list:
-                u, v = oi._uvcoord_Mlambda
+                u, v = oi._uvcoord_Mlambda_sc
                 phase = phase_model(ra, dec, u, v)
                 model = np.exp(1j * phase)
                 visdata = getattr(oi, f'_visdata_1{p}')
@@ -1139,7 +1298,7 @@ class AstroList(GraviList):
         gooddata2 = []
         for oi in self[self._index_swap]:
             for p in self._pol_list:
-                u, v = oi._uvcoord_Mlambda
+                u, v = oi._uvcoord_Mlambda_sc
                 phase = phase_model(ra, dec, u, v)
                 model = np.exp(1j * phase)
                 visdata = getattr(oi, f'_visdata_1{p}')
@@ -1175,14 +1334,14 @@ class AstroList(GraviList):
             # Unswapped data
             vd = []
             for oi in self[self._index_unswap]:
-                u, v = oi._uvcoord_Mlambda
+                u, v = oi._uvcoord_Mlambda_sc
                 phase = phase_model(-ra, -dec, u, v)
                 vd.append(getattr(oi, f'_visdata_1{p}') * np.exp(1j * phase))
             visdata1.append(vd)
     
             vd = []
             for oi in self[self._index_swap]:
-                u, v = oi._uvcoord_Mlambda
+                u, v = oi._uvcoord_Mlambda_sc
                 phase = phase_model(ra, dec, u, v)
                 vd.append(getattr(oi, f'_visdata_1{p}') * np.exp(1j * phase))
             visdata2.append(vd)
@@ -1255,6 +1414,50 @@ class AstroList(GraviList):
         '''
         for p in self._pol_list:
             self._datalist[index].correct_visdata(polarization=p, met_jump=met_jump)
+
+
+    def correct_met_jump_all(
+            self, 
+            met_jump_dict : dict):
+        '''
+        Correct all the metrology phase jumps from the provided dictionary.
+
+        Parameters
+        ----------
+        met_jump_dict : dict
+            A dictionary containing the metrology phase jump.
+            The key is the index of the data in the list and the value is 
+            the metrology phase jump.
+        '''
+        for i, met_jump in met_jump_dict.items():
+            if self._logger is not None:
+                self._logger.info(f'Correct the metrology phase jump of file {i}: {met_jump}')
+
+            self.correct_met_jump(i, met_jump)
+
+
+    def flag_visdata(
+            self, 
+            index : Union[int, List[int]] = None, 
+            polarization : int = None, 
+            dit : Union[int, List[int]] = None, 
+            baseline : Union[int, List[int]] = None):
+        '''
+        Flag the visibility data.
+        '''
+        if index is None:
+            for oi in self:
+                oi.flag_visdata(polarization=polarization, 
+                                dit=dit, baseline=baseline)
+        elif isinstance(index, int):
+            self[index].flag_visdata(polarization=polarization, 
+                                     dit=dit, baseline=baseline)
+        elif isinstance(index, list):
+            for i in index:
+                self[i].flag_visdata(polarization=polarization, 
+                                     dit=dit, baseline=baseline)
+        else:
+            raise ValueError('The index must be an integer or a list of integers!')
 
 
     def grid_search_phase(self, plot=True, **kwargs):
@@ -1594,7 +1797,7 @@ class SciVisList(GraviList):
             else:
                 self._index_unswap.append(i)
             
-            self._logger.info(f'Processing [{i}] {oi._arctime}, swap: {oi._swap}')
+            self._logger.info(f'[SciVisList] processing [{i}] {oi._arctime}, swap: {oi._swap}')
 
         self._pol_list = self._datalist[0]._pol_list
         self._sobj_x = self._datalist[0]._sobj_x
@@ -1644,6 +1847,7 @@ class SciVisList(GraviList):
                 axs[i].text(0.05, 0.95, f'P{p}', fontsize=16, 
                             transform=axs[i].transAxes, va='top', ha='left',
                             bbox=dict(facecolor='w', edgecolor='none', alpha=0.5))
+            axs[0].legend().set_visible(False)
 
             if pdf is not None:
                 pdf.savefig(fig)
@@ -1935,8 +2139,8 @@ class SciVisList(GraviList):
         res= grid_search(self.chi2_phase, plot=plot, **kwargs)
 
         if plot:
-            ra_total = self._sobj_x + res['ra_best']
-            dec_total = self._sobj_y + res['dec_best']
+            ra_total = self._sobj_x + res['ra_best_zoom']
+            dec_total = self._sobj_y + res['dec_best_zoom']
             ax = res['axs'][1]
             text = '\n'.join([f'SOBJ_XY: ({self._sobj_x:.2f}, {self._sobj_y:.2f})', 
                     f'Total: ({ra_total:.2f}, {dec_total:.2f})'])
@@ -1993,7 +2197,8 @@ class SciVisList(GraviList):
             if ax is not None:
                 ax.minorticks_on()
                 ax.set_ylim([-180, 180])
-                ax.legend(loc='best', ncols=3, handlelength=1, columnspacing=1, fontsize=14)
+                ax.legend(loc='upper left', ncols=1, handlelength=1, fontsize=14, 
+                          bbox_to_anchor=(1, 1))
             
             if pdf is not None:
                 pdf.savefig(fig)

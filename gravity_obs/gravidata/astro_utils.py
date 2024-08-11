@@ -23,7 +23,7 @@ def phase_model(ra, dec, u, v):
     v : float or array
         V coordinate in Mlambda; (NDIT, NBASELINE, NCHANEL).
     '''
-    phase = 2 * np.pi * (np.pi / 3.6 / 180) * (u * ra + v * dec)
+    phase = -2 * np.pi * (np.pi / 3.6 / 180) * (u * ra + v * dec)
     return phase
 
 
@@ -174,7 +174,7 @@ def solve_offset(opd, uvcoord):
     '''
     offset = []
     for dit in range(opd.shape[0]):
-        uvcoord_pseudo_inverse = np.linalg.pinv(uvcoord[dit, :, :] * 1e6)
+        uvcoord_pseudo_inverse = np.linalg.pinv(-uvcoord[dit, :, :] * 1e6)
         offset.append(np.ma.dot(opd[dit, :], uvcoord_pseudo_inverse)) 
     offset = np.array(offset) / np.pi * 180 * 3600 * 1000
     return offset
@@ -418,7 +418,7 @@ def gdelay_astrometry(
             ruv = oi1.get_uvdist(units='Mlambda')[dit, :, :]
 
             s_B = np.pi / 180 / 3.6 * np.dot(offset[dit, :], uvcoord[dit, :, :])[:, np.newaxis]
-            model = np.angle(np.exp(1j * 2*np.pi * s_B / wave[np.newaxis, :]), deg=True)
+            model = np.angle(np.exp(-1j * 2*np.pi * s_B / wave[np.newaxis, :]), deg=True)
             for bsl in range(visphi.shape[1]):
                 if dit == 0:
                     l1 = oi1._baseline[bsl]
