@@ -119,12 +119,14 @@ def opd_model(l1, l2, l3, l4, wave):
     return v
 
 
-def lossfunc(l, phi0, wave): 
+def lossfunc(l, k, phi0, wave): 
     '''
     Compute the loss function for the given baseline configuration and wavelength.
     '''
     l1, l2, l3 = l
-    model = opd_model(l1, l2, l3, 0, wave)
+    args = [l1, l2, l3, wave]
+    args.insert(k, 0)
+    model = opd_model(*args)
     return np.sum(np.angle(np.exp(1j * phi0) * np.conj(model))**2)
 
 
@@ -132,10 +134,24 @@ def fit_zerofc(phi0, opd0, wave, opd_lim=1):
     '''
     Fit the zero frequency of the metrology zero point in phase.
     '''
-    # l1, l2, l3 with the assumption that l4=0
-    l_init = [opd0[2], opd0[4], opd0[5]]
+    # Find a good triangle
+    l_try = {3: [opd0[2], opd0[4], opd0[5]],     # l4=0
+             2: [opd0[1], opd0[3], -opd0[5]],    # l3=0
+             1: [opd0[0], -opd0[3], -opd0[4]],   # l2=0
+             0: [-opd0[0], -opd0[1], -opd0[2]]}  # l1=0
+
+    flag_fail = True
+    for k, l_init in l_try.items():
+        if ~np.isnan(np.sum(l_init)):
+            flag_fail = False
+            break
+
+    if flag_fail:
+        raise AssertionError('Cannot find a good triangle!')
+
+    # Optimize group delay
     bounds = [(l-opd_lim, l+opd_lim) for l in l_init]
-    res = minimize(lossfunc, l_init, args=(phi0, wave), bounds=bounds)
+    res = minimize(lossfunc, l_init, args=(k, phi0, wave), bounds=bounds)
 
     if res.success:
         zerofc = np.array([res.x[0], res.x[1], res.x[2], 0])
@@ -159,7 +175,7 @@ def solve_offset(opd, uvcoord):
     offset = []
     for dit in range(opd.shape[0]):
         uvcoord_pseudo_inverse = np.linalg.pinv(uvcoord[dit, :, :] * 1e6)
-        offset.append(np.dot(opd[dit, :], uvcoord_pseudo_inverse)) 
+        offset.append(np.ma.dot(opd[dit, :], uvcoord_pseudo_inverse)) 
     offset = np.array(offset) / np.pi * 180 * 3600 * 1000
     return offset
 
@@ -334,7 +350,8 @@ def compute_gdelay(
     gd = opd3[np.ma.argmax(amp, axis=-1)]
     gdList.append(gd)
 
-    gd = np.ma.sum(gdList, axis=0)
+    gd = np.sum(gdList, axis=0)
+    gd[gd0.mask] = np.nan
 
     if closure:
         if logger is not None:
@@ -342,18 +359,31 @@ def compute_gdelay(
         elif verbose:
             print('Fitting for the closure...')
 
+        flag = []
         visphi = np.angle(visdata)
         for dit in range(gd.shape[0]):
             try:
                 zerofc = fit_zerofc(visphi[dit, :, :], gd[dit, :], wave, opd_lim=closure_lim)
                 gd[dit, :] = np.dot(t2b_matrix, zerofc)
+                flag.append(True)
             except ValueError:
                 if logger is not None:
                     logger.warning(f'Cannot find a closed solution within {closure_lim} fringe. Return the initial OPD results!')
                 elif verbose:
                     print(f'Cannot find a closed solution within {closure_lim} fringe. Return the initial OPD results!')
+            except AssertionError as e:
+                if logger is not None:
+                    logger.warning(e)
+                elif verbose:
+                    print(e)
+                
+                flag.append(False)
+        flag = np.array(flag)
 
-    return gd
+    else:
+        flag = None
+
+    return gd, flag
 
 
 def gdelay_astrometry(
@@ -365,41 +395,36 @@ def gdelay_astrometry(
         closure : bool = True,
         closure_lim : float = 1.2,
         plot : bool = False,
-        ax : plt.axes = None):
+        ax : plt.axes = None,
+        plain : bool = False):
     '''
     Compute the astrometry with a pair of swap data using the group delay method.
     '''
-    wave = oi1._wave
-    visphi = oi1.diff_visphi(oi2, polarization=polarization, average=average)
-    uvcoord = (np.array(oi1._uvcoord_m)[:, :, :, 0] + 
-               np.array(oi2._uvcoord_m)[:, :, :, 0]).swapaxes(0, 1)
+    wave = oi1._wave_sc
+    visphi = oi1.diff_visphi(oi2, polarization=polarization, average=True)
+    uvcoord = (np.array(oi1._uvcoord_m)[:, :, :, 0].mean(axis=1, keepdims=True) + 
+               np.array(oi2._uvcoord_m)[:, :, :, 0].mean(axis=1, keepdims=True)).swapaxes(0, 1)
 
-    if average:
-        uvcoord = uvcoord.mean(axis=0, keepdims=True)
-
-    gd = compute_gdelay(np.exp(1j*visphi), wave, max_width=max_width, 
-                        closure=closure, closure_lim=closure_lim, 
-                        verbose=False)
+    gd, _ = compute_gdelay(np.ma.exp(1j*visphi), wave, max_width=max_width, 
+                           closure=closure, closure_lim=closure_lim, 
+                           verbose=False)
     offset = solve_offset(gd, uvcoord)
 
     if plot:
         if ax is None:
             fig, ax = plt.subplots(1, 1, figsize=(7, 7))
-            plain = False
-        else:
-            plain = True
 
         for dit in range(visphi.shape[0]):
-            ruv = oi1.get_uvdist(units='permas')[dit, :, :]
+            ruv = oi1.get_uvdist(units='Mlambda')[dit, :, :]
 
             s_B = np.pi / 180 / 3.6 * np.dot(offset[dit, :], uvcoord[dit, :, :])[:, np.newaxis]
-            model = np.angle(np.exp(1j * 2*np.pi * s_B / wave[np.newaxis, :]))
+            model = np.angle(np.exp(1j * 2*np.pi * s_B / wave[np.newaxis, :]), deg=True)
             for bsl in range(visphi.shape[1]):
                 if dit == 0:
                     l1 = oi1._baseline[bsl]
                 else:
                     l1 = None
-                ax.plot(ruv[bsl, :], visphi[dit, bsl, :], ls='-', color=f'C{bsl}', label=l1)
+                ax.plot(ruv[bsl, :], np.rad2deg(visphi[dit, bsl, :]), ls='-', color=f'C{bsl}', label=l1)
 
             for bsl in range(visphi.shape[1]):
                 if (dit == 0) & (bsl == 0):
@@ -408,19 +433,20 @@ def gdelay_astrometry(
                 else:
                     l2 = None
                     l3 = None
-                ax.plot(ruv[bsl, :], np.angle(np.exp(2j * np.pi * gd[dit, bsl] / wave)), 
+                ax.plot(ruv[bsl, :], np.angle(np.exp(2j * np.pi * gd[dit, bsl] / wave), deg=True), 
                         ls='-', color=f'gray', label=l2)
                 ax.plot(ruv[bsl, :], model[bsl, :], ls='-', color=f'k', label=l3)
         
         if not plain:
+            ra, dec = offset.mean(axis=0)
+            ax.text(0.05, 0.05, f'RA: {ra:.2f}\nDec: {dec:.2f}', fontsize=14, 
+                    transform=ax.transAxes, va='bottom', ha='left',
+                    bbox=dict(facecolor='w', edgecolor='w', alpha=0.8))
             ax.legend(loc='best', fontsize=14, handlelength=1, columnspacing=1, ncols=3)
-            ax.set_ylim([-np.pi, np.pi])
+            ax.set_ylim([-180, 180])
             ax.set_xlabel(r'UV distance (mas$^{-1}$)', fontsize=18)
             ax.set_ylabel(r'VISPHI (rad)', fontsize=18)
             ax.minorticks_on()
 
-    if average & (len(offset.shape) > 1):
-        offset = offset[0, :]
-
-    return offset
+    return np.squeeze(offset)
 
