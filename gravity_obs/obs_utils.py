@@ -15,6 +15,7 @@ except ImportError:
 
  
 __all__ = ['coord_offset', 'cal_offset', 'cal_coord_motion', 'sc_offset', 
+           'coord_colon_to_degree', 'coord_degree_to_colon',
            'get_coord_plain', 'get_coord_colon', 'get_pos_current', 
            'get_pos_J2000', 'get_pos_ao', 'read_coordinate', 
            'coordinate_convert_epoch', 'search_gaia_single', 
