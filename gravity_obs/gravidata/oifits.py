@@ -1150,8 +1150,8 @@ class AstroList(GraviList):
             self._logger.info(f'[AstroList] processing [{i}] {oi._arctime}, swap: {oi._swap}')
 
         self._pol_list = self._datalist[0]._pol_list
-        self._sobj_x = self._datalist[0]._sobj_x
-        self._sobj_y = self._datalist[0]._sobj_y
+        self._sobj_x = self._datalist[self._index_unswap[0]]._sobj_x
+        self._sobj_y = self._datalist[self._index_unswap[0]]._sobj_y
 
 
     def astrometry_swap(self, plot=True, report_name=None):
@@ -1800,8 +1800,8 @@ class SciVisList(GraviList):
             self._logger.info(f'[SciVisList] processing [{i}] {oi._arctime}, swap: {oi._swap}')
 
         self._pol_list = self._datalist[0]._pol_list
-        self._sobj_x = self._datalist[0]._sobj_x
-        self._sobj_y = self._datalist[0]._sobj_y
+        self._sobj_x = self._datalist[self._index_unswap[0]]._sobj_x
+        self._sobj_y = self._datalist[self._index_unswap[0]]._sobj_y
 
 
     def astrometry_swap(self, plot=True, report_name=None):
