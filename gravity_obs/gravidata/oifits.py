@@ -12,7 +12,7 @@ from astropy.visualization import simple_norm
 from astropy.utils.decorators import lazyproperty
 from .gravi_utils import N_BASELINE, N_TRIANGLE, N_TELESCOPE
 from .gravi_utils import baseline_names, telescope_names, triangle_names
-from .gravi_utils import t2b_matrix, lambda_met
+from .gravi_utils import t2b_matrix, lambda_met, mask_outlier
 from .astro_utils import phase_model, matrix_opd
 from .astro_utils import grid_search, gdelay_astrometry, compute_gdelay
 
@@ -197,7 +197,7 @@ class AstroFits(GraviFits):
     '''
     A class to read and plot GRAVITY ASTROREDUCED data.
     '''
-    def __init__(self, filename, ignore_flag=False, per_exp=False, normalize=False):
+    def __init__(self, filename, ignore_flag=False, per_exp=False, normalize=False, astrometry=True):
         '''
         Parameters
         ----------
@@ -212,6 +212,7 @@ class AstroFits(GraviFits):
         '''
         super().__init__(filename, ignore_flag)
 
+        self._astrometry = astrometry
         self._wave_sc = self.get_wavelength(units='micron')
 
         # Set the uv coordinates
@@ -249,6 +250,79 @@ class AstroFits(GraviFits):
         chi2 = np.ma.sum(gamma.imag**2)
         chi2_baseline = np.ma.sum(gamma.imag**2, axis=1)
         return chi2, chi2_baseline
+
+
+    def correct_groupdelay(self, polarization=None, plot=False):
+        '''
+        Correct the visdata group delay.
+        '''
+        extver = self.get_extver(fiber='SC', polarization=polarization)
+        visdata = self.get_visdata(polarization=polarization)
+        wave = self.get_wavelength(polarization=polarization)
+        gd = self.get_groupdelay(polarization=polarization, plot=plot)
+
+        visdata_corr = visdata * np.exp(-2j * np.pi * gd[:, :, np.newaxis] / wave[np.newaxis, np.newaxis, :])
+        setattr(self, f'_visdata_{extver}', visdata_corr)
+
+
+    def correct_selfref(self, polarization=None, use_pipeline=False, deg=3, wmin=1.9, wmax=2.5, mask_out=True, plot=False):
+        '''
+        Correct the phase with self reference.
+        '''
+        extver = self.get_extver(fiber='SC', polarization=polarization)
+        visdata = getattr(self, f'_visdata_{extver}')
+
+        if plot:
+            nrows, ncols, _ = visdata.shape
+            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(15, 8), sharex=True, sharey=True)
+            fig.subplots_adjust(hspace=0, wspace=0)
+            axo = fig.add_subplot(111, frameon=False) # The out axis
+            axo.tick_params(axis='y', which='both', left=False, labelleft=False)
+            axo.tick_params(axis='x', which='both', bottom=False, labelbottom=False)
+            axo.set_xlabel(r'Wavelength ($\mu$m)', fontsize=24, labelpad=30)
+            axo.set_ylabel(r'VISPHI ($^\circ$)', fontsize=24, labelpad=52)
+
+        if use_pipeline:
+            selfref = self.get_vis('SELF_REF')
+            visdata_corr = self.get_visdata() * np.exp(1j * selfref)
+        else:
+            visphi = np.angle(visdata, deg=True)
+            visdata_corr = np.zeros_like(visdata)
+
+            wave = self.get_wavelength(fiber='SC')
+            k = 1 / wave
+            mask_fit = (wave > wmin) & (wave < wmax)
+
+            nrows, ncols, _ = visdata.shape
+            for rr in range(nrows):
+                for cc in range(ncols):
+                    y = visphi[rr, cc, :]
+
+                    if mask_out:
+                        mask = mask_fit & mask_outlier(y, size=10)
+                    else:
+                        mask = mask_fit
+
+                    try:
+                        y_fit = np.polyval(np.polyfit(k[mask], y[mask], deg=deg), k)
+                        visdata_corr[rr, cc, :] = visdata[rr, cc, :] * np.exp(-1j * np.deg2rad(y_fit))
+                    except:
+                        visdata_corr[rr, cc, :] = np.ma.array(visdata[rr, cc, :], 
+                                                              mask=np.ones(visdata.shape[-1], dtype=bool))
+            
+        setattr(self, f'_visdata_{extver}', visdata_corr)
+
+        if plot:
+            for cc in range(ncols):
+                for rr in range(nrows):
+                    ax = axs[rr, cc]
+                    y = np.angle(visdata[rr, cc, :], deg=True)
+                    ax.plot(wave, y, color=f'C{cc}')
+                    
+                    y = np.angle(visdata_corr[rr, cc, :], deg=True)
+                    ax.plot(wave, y, color=f'k', lw=0.5, alpha=1)
+                ax.minorticks_on()
+                axs[0, cc].set_title(self._baseline[cc], fontsize=16, color=f'C{cc}')
 
 
     def correct_visdata(self, 
@@ -339,6 +413,41 @@ class AstroFits(GraviFits):
                     visdata[d, b, :].mask = True
 
 
+    def get_groupdelay(self, polarization=None, plot=False):
+        '''
+        Calculate the group delay of the visibility data.
+        '''
+        #extver = self.get_extver(fiber='SC', polarization=polarization)
+        #visdata = getattr(self, f'_visdata_{extver}')
+        visdata = self.get_visdata(polarization=polarization)
+        wave = self.get_wavelength(polarization=polarization)
+
+        gd, flags = compute_gdelay(visdata, wave)
+
+        if plot:
+            nrows, ncols = gd.shape
+            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 8), 
+                                    sharex=True, sharey=True)
+            fig.subplots_adjust(hspace=0, wspace=0)
+            axo = fig.add_subplot(111, frameon=False) # The out axis
+            axo.tick_params(axis='y', which='both', left=False, labelleft=False)
+            axo.tick_params(axis='x', which='both', bottom=False, labelbottom=False)
+            axo.set_xlabel(r'Wavelength ($\mu$m)', fontsize=24, labelpad=30)
+            axo.set_ylabel(r'VISPHI ($^\circ$)', fontsize=24, labelpad=52)
+        
+            for cc in range(ncols):
+                for rr in range(nrows):
+                    ax = axs[rr, cc]
+                    ax.plot(wave, np.angle(visdata[rr, cc, :], deg=True), color=f'C{cc}')
+        
+                    y = np.angle(np.exp(2j * np.pi * gd[rr, cc] / wave), deg=True)
+                    ax.plot(wave, y, color='gray', ls='--')
+                ax.minorticks_on()
+                axs[0, cc].set_title(self._baseline[cc], fontsize=16, color=f'C{cc}')
+
+        return gd
+
+
     def get_opdDisp(self, polarization=None):
         '''
         Get the OPD_DISP from the OIFITS file.
@@ -395,7 +504,10 @@ class AstroFits(GraviFits):
         opdMetCorr = self.get_opdMetCorr(polarization=polarization)
         opdSep = self.get_opdSep()
 
-        visdata = visdata * np.exp(1j * (phaseref + 2*np.pi / self._wave_sc * (opdSep - opdDisp - opdMetCorr) * 1e6))
+        if self._astrometry:
+            visdata = visdata * np.exp(1j * (phaseref + 2*np.pi / self._wave_sc * (opdSep - opdDisp - opdMetCorr) * 1e6))
+        else:
+            visdata = visdata
 
         if per_exp:
             visdata /= self._dit
@@ -407,7 +519,7 @@ class AstroFits(GraviFits):
         return visdata
 
 
-    def get_uvcoord_vis(self, polarization=None, units='m'):
+    def get_uvcoord_vis(self, fiber='SC', polarization=None, units='m'):
         '''
         Get the u and v coordinates of the baselines.
 
@@ -427,8 +539,8 @@ class AstroFits(GraviFits):
         '''
         assert units in ['Mlambda', 'm'], 'units must be Mlambda or m.'
 
-        ucoord = self.get_vis('UCOORD', fiber='SC', polarization=polarization)
-        vcoord = self.get_vis('VCOORD', fiber='SC', polarization=polarization)
+        ucoord = self.get_vis('UCOORD', fiber=fiber, polarization=polarization)
+        vcoord = self.get_vis('VCOORD', fiber=fiber, polarization=polarization)
         
         if units == 'Mlambda':
             wave = self.get_wavelength(units='micron')
@@ -495,6 +607,34 @@ class AstroFits(GraviFits):
             ax2.text(0.05, 0.95, text, fontsize=12, transform=ax2.transAxes, va='top', ha='left',
                     bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
         return res
+
+
+    def plot_uvcoord(self, polarization=None, units='Mlambda', ax=None, plain=False):
+        '''
+        Plot the uv coordinates.
+        '''
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(5, 5))
+        
+        u, v = self.get_uvcoord_vis(polarization=polarization, units=units)
+
+        for dit in range(u.shape[0]):
+            for bsl in range(u.shape[1]):
+                if dit == 0:
+                    label = self._baseline[bsl]
+                else:
+                    label = None
+                ax.plot(u[dit, bsl, :], v[dit, bsl, :], marker='o', ls='none', color=f'C{bsl}', label=label)
+                ax.plot(-u[dit, bsl, :], -v[dit, bsl, :], marker='o', ls='none', color=f'gray')
+
+        if not plain:
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, fontsize=16, 
+                      handlelength=1)
+            ax.invert_xaxis()
+            ax.set_xlabel(f'u ({units})', fontsize=18)
+            ax.set_ylabel(f'v ({units})', fontsize=18)
+            ax.minorticks_on()
+        return ax
 
 
     def plot_visphi(self, polarization=None, average=False, ax=None, plain=False):
@@ -1125,6 +1265,7 @@ class AstroList(GraviList):
             ignore_flag : bool = False, 
             per_exp : bool = False, 
             normalize : bool = False,
+            astrometry : bool = True,
             verbose=True,
             log_name=None) -> None:
         '''
@@ -1139,7 +1280,8 @@ class AstroList(GraviList):
         self._index_unswap = []
         self._index_swap = []
         for i, f in enumerate(files):
-            oi = AstroFits(f, ignore_flag, per_exp, normalize)
+            oi = AstroFits(f, ignore_flag=ignore_flag, per_exp=per_exp, 
+                           normalize=normalize, astrometry=astrometry)
             self._datalist.append(oi)
 
             if oi._swap:
@@ -1396,6 +1538,32 @@ class AstroList(GraviList):
                 plt.close(fig)
 
 
+    def correct_groupdelay(self, plot=False):
+        '''
+        Correct the group delay.
+        '''
+        for oi in self:
+            for i, p in enumerate(self._pol_list):
+                oi.correct_groupdelay(polarization=p, plot=plot)
+
+                if plot:
+                    plt.show()
+
+
+    def correct_selfref(self, use_pipeline=False, deg=3, wmin=1.9, wmax=2.5, mask_out=True, plot=False):
+        '''
+        Correct the phase with self reference.
+        '''
+        for oi in self:
+            for i, p in enumerate(self._pol_list):
+                oi.correct_selfref(
+                    polarization=p, use_pipeline=use_pipeline, deg=deg, 
+                    wmin=wmin, wmax=wmax, mask_out=mask_out, plot=plot)
+
+                if plot:
+                    plt.show()
+
+
     def correct_metzp(self):
         '''
         Correct the metrology zero points.
@@ -1530,6 +1698,44 @@ class AstroList(GraviList):
         return offsetList
 
 
+    def get_averaged_visphi(self, polarization=None, mask=None):
+        '''
+        Get the averaged VISPHI
+        '''
+        visphiList = []
+        ucoordList = []
+        vcoordList = []
+        for oi in self:
+            extver = oi.get_extver(fiber='SC', polarization=polarization)
+            visdata = getattr(oi, f'_visdata_{extver}')
+            visphi = np.angle(visdata, deg=True)
+            visphiList.append(visphi)
+
+            ucoord, vcoord = oi.get_uvcoord_vis(fiber='SC', polarization=polarization, units='m')
+            ucoordList.append(ucoord)
+            vcoordList.append(vcoord)
+
+        visphiList = np.ma.concatenate(visphiList, axis=0)
+        ucoordList = np.concatenate(ucoordList, axis=0)
+        vcoordList = np.concatenate(vcoordList, axis=0)
+
+        if mask is None:
+            mask = np.ones(visphiList.shape[-1], dtype=bool)
+
+        visphi_err = np.ma.std(visphiList[:, :, mask], axis=-1, keepdims=True) * np.ones_like(visphiList)
+        weights=visphi_err**-2
+
+        visphi, w = np.ma.average(visphiList, weights=weights, axis=0, returned=True)
+        visphi_err = w**-0.5
+
+        weights = np.median(weights, axis=-1, keepdims=True)
+        ucoord = np.squeeze(np.average(ucoordList, weights=weights, axis=0))
+        vcoord = np.squeeze(np.average(vcoordList, weights=weights, axis=0))
+
+        res = {'visphi': visphi, 'visphi_err': visphi_err, 'ucoord': ucoord, 'vcoord': vcoord}
+        return res
+
+
     def get_pairs(self):
         '''
         Get the pair index for the unswap and swap data.
@@ -1626,6 +1832,20 @@ class AstroList(GraviList):
             pdf.close()
 
         self._logger.info('All data plotted!')
+
+
+    def plot_uvcoord(self, polarization=None, units='Mlambda', ax=None):
+        '''
+        Plot the uv coordinates.
+        '''
+        for loop, oi in enumerate(self):
+            if loop == 0:
+                plain = False
+            else:
+                plain = True
+
+            ax = oi.plot_uvcoord(polarization=polarization, units=units, ax=ax, plain=plain)
+        return ax
 
 
     def run_swap_astrometry(self, met_jump_dict=None, plot=True, report_name=None, verbose=True):

@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.ndimage import median_filter
+from astropy.stats import sigma_clipped_stats
 
 N_TELESCOPE = 4
 N_BASELINE = 6
@@ -34,3 +36,13 @@ t2b_matrix = np.array([[1, -1, 0, 0],
                        [0, 0, 1, -1]])
 
 lambda_met = 1.908  # micron
+
+
+def mask_outlier(x, size=10, nsigma=3, maxiters=5):
+    '''
+    '''
+    med = median_filter(x, size=size)
+    res = x - med
+    _, _, stddev = sigma_clipped_stats(res, sigma=nsigma, maxiters=maxiters)
+    mask = res < 5 * stddev
+    return mask
