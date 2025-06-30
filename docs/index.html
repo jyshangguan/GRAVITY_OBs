@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRAVITY_OBs Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-title">GRAVITY_OBs</h1>
+            <ul class="nav-menu">
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#modules">Modules</a></li>
+                <li><a href="#examples">Examples</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <h1>GRAVITY_OBs</h1>
+            <p class="hero-subtitle">Python package for preparing VLTI/GRAVITY observations</p>
+            <p class="hero-description">Generate Observation Blocks (OBs) for GRAVITY using ESO p2api with comprehensive utilities for coordinate handling, target management, and data analysis.</p>
+            <div class="hero-buttons">
+                <a href="#installation" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/user/GRAVITY_OBs" class="btn btn-secondary"><i class="fab fa-github"></i> GitHub</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section id="overview" class="section">
+            <div class="container">
+                <h2><i class="fas fa-telescope"></i> Overview</h2>
+                <div class="overview-grid">
+                    <div class="feature-card">
+                        <i class="fas fa-cogs"></i>
+                        <h3>P2API Integration</h3>
+                        <p>Seamless integration with ESO's Phase 2 API for creating and managing observation blocks</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <h3>Coordinate Utilities</h3>
+                        <p>Comprehensive coordinate conversion and proper motion calculations for astronomical observations</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Data Analysis</h3>
+                        <p>Built-in tools for GRAVITY data analysis including astrometry and visibility processing</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-database"></i>
+                        <h3>Catalog Integration</h3>
+                        <p>Direct access to Gaia, 2MASS, and SIMBAD catalogs for target information</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="installation" class="section bg-light">
+            <div class="container">
+                <h2><i class="fas fa-download"></i> Installation</h2>
+                <div class="installation-content">
+                    <div class="install-step">
+                        <h3>1. Clone the repository</h3>
+                        <div class="code-block">
+                            <pre><code class="language-bash">git clone https://github.com/user/GRAVITY_OBs.git
+cd GRAVITY_OBs</code></pre>
+                        </div>
+                    </div>
+                    <div class="install-step">
+                        <h3>2. Install dependencies</h3>
+                        <div class="code-block">
+                            <pre><code class="language-bash">pip install -r requirements.txt</code></pre>
+                        </div>
+                    </div>
+                    <div class="install-step">
+                        <h3>3. Install the package</h3>
+                        <div class="code-block">
+                            <pre><code class="language-bash">pip install -e .</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="requirements">
+                    <h3>Requirements</h3>
+                    <ul>
+                        <li>Python 3.7+</li>
+                        <li>numpy</li>
+                        <li>astropy</li>
+                        <li>matplotlib</li>
+                        <li>p2api (for ESO Phase 2 operations)</li>
+                        <li>astroquery (for catalog access)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="modules" class="section">
+            <div class="container">
+                <h2><i class="fas fa-puzzle-piece"></i> Modules</h2>
+                
+                <div class="module-nav">
+                    <button class="module-btn active" data-module="p2-tools">P2 Tools</button>
+                    <button class="module-btn" data-module="obs-utils">Observation Utils</button>
+                    <button class="module-btn" data-module="aspro-utils">ASPRO Utils</button>
+                    <button class="module-btn" data-module="colab-utils">Colab Utils</button>
+                    <button class="module-btn" data-module="gravidata">GraviData</button>
+                </div>
+
+                <div id="p2-tools" class="module-content active">
+                    <h3>gravity_obs.p2_tools</h3>
+                    <p>Core module for interacting with ESO's Phase 2 API and creating GRAVITY observation blocks.</p>
+                    
+                    <div class="function-grid">
+                        <div class="function-card">
+                            <h4>p2api_GRAVITY</h4>
+                            <p class="function-desc">Main class for creating OBs on P2 for GRAVITY observations</p>
+                            <div class="function-methods">
+                                <span class="method">add_GRAVITY_dual_offaxis_acq()</span>
+                                <span class="method">add_GRAVITY_dual_onaxis_acq()</span>
+                                <span class="method">add_GRAVITY_dual_obs_calibrator()</span>
+                                <span class="method">add_GRAVITY_dual_obs_exp()</span>
+                                <span class="method">add_GRAVITY_single_onaxis_acq()</span>
+                                <span class="method">add_GRAVITY_single_offaxis_acq()</span>
+                                <span class="method">create_folder()</span>
+                                <span class="method">create_OB()</span>
+                            </div>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>get_dit_med(ksc, tel='UT')</h4>
+                            <p class="function-desc">Calculate proper DIT and NDIT for MEDIUM spectral resolution</p>
+                            <div class="params">
+                                <strong>Parameters:</strong>
+                                <ul>
+                                    <li><code>ksc</code>: Ks magnitude of the source</li>
+                                    <li><code>tel</code>: Telescope type ('UT' or 'AT')</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>get_dit_low(ksc, tel='UT')</h4>
+                            <p class="function-desc">Calculate proper DIT and NDIT for LOW spectral resolution</p>
+                            <div class="params">
+                                <strong>Parameters:</strong>
+                                <ul>
+                                    <li><code>ksc</code>: Ks magnitude of the source</li>
+                                    <li><code>tel</code>: Telescope type ('UT' or 'AT')</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>create_OB(ob_name, folder_name, runContainerId, api)</h4>
+                            <p class="function-desc">Create an observation block or replace existing one in specified folder</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>ob_add_target(ob, name, ra, dec, pma, pmd)</h4>
+                            <p class="function-desc">Add target information to an observation block</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="obs-utils" class="module-content">
+                    <h3>gravity_obs.obs_utils</h3>
+                    <p>Utilities for coordinate conversions, proper motion calculations, and catalog queries.</p>
+                    
+                    <div class="function-grid">
+                        <div class="function-card">
+                            <h4>cal_coord_motion(c, pma, pmd, plx, radvel)</h4>
+                            <p class="function-desc">Calculate coordinate motion with proper motion and parallax corrections</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>sc_offset(c_sc, c_ft, ...)</h4>
+                            <p class="function-desc">Calculate science object offset from fringe tracker coordinates</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>coord_colon_to_degree(ra, dec)</h4>
+                            <p class="function-desc">Convert coordinates from colon format to decimal degrees</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>coord_degree_to_colon(ra, dec)</h4>
+                            <p class="function-desc">Convert coordinates from decimal degrees to colon format</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>search_gaia_single(ra, dec, radius)</h4>
+                            <p class="function-desc">Search Gaia catalog for single source within specified radius</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>search_simbad(name)</h4>
+                            <p class="function-desc">Query SIMBAD database for object information by name</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>xmatch_gaiadr3(t, radius, colRA, colDec)</h4>
+                            <p class="function-desc">Cross-match table with Gaia DR3 catalog</p>
+                        </div>
+                        
+                        <div class="function-card">
+                            <h4>get_dit(k, res='med', pol='split', tel='UT')</h4>
+                            <p class="function-desc">Get recommended DIT/NDIT values based on magnitude and setup</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="aspro-utils" class="module-content">
+                    <h3>gravity_obs.aspro_utils</h3>
+                    <p>Utilities for creating ASPRO-compatible files for observation planning.</p>
+                    
+                    <div class="function-grid">
+                        <div class="function-card">
+                            <h4>CreateAsproVoTableFile(filename, dataset, ...)</h4>
+                            <p class="function-desc">Create VOTable file compatible with ASPRO for target lists</p>
+                            <div class="params">
+                                <strong>Parameters:</strong>
+                                <ul>
+                                    <li><code>filename</code>: Output VOTable filename</li>
+                                    <li><code>dataset</code>: Astropy Table with target data</li>
+                                    <li><code>col_name</code>: Column name for target names</li>
+                                    <li><code>col_ra</code>: Column name for RA coordinates</li>
+                                    <li><code>col_dec</code>: Column name for Dec coordinates</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="colab-utils" class="module-content">
+                    <h3>gravity_obs.colab_utils</h3>
+                    <p>Utilities for Google Colab integration and spreadsheet handling.</p>
+                    
+                    <div class="function-grid">
+                        <div class="function-card">
+                            <h4>load_gspread_url(sheet_url, sheet_name, ...)</h4>
+                            <p class="function-desc">Load data from Google Sheets URL for use in Colab notebooks</p>
+                            <div class="params">
+                                <strong>Parameters:</strong>
+                                <ul>
+                                    <li><code>sheet_url</code>: Google Sheets URL</li>
+                                    <li><code>sheet_name</code>: Name of specific sheet (optional)</li>
+                                    <li><code>header_row</code>: Row number containing headers</li>
+                                    <li><code>skip_rows</code>: Number of rows to skip</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="gravidata" class="module-content">
+                    <h3>gravity_obs.gravidata</h3>
+                    <p>Data analysis tools for GRAVITY observations including astrometry and visibility processing.</p>
+                    
+                    <div class="submodule-section">
+                        <h4>oifits.py</h4>
+                        <div class="function-grid">
+                            <div class="function-card">
+                                <h5>OIFits</h5>
+                                <p class="function-desc">Base class for handling OIFITS files</p>
+                                <div class="function-methods">
+                                    <span class="method">get_vis()</span>
+                                    <span class="method">get_wavelength()</span>
+                                    <span class="method">set_telescope()</span>
+                                </div>
+                            </div>
+                            
+                            <div class="function-card">
+                                <h5>GravityOIFits</h5>
+                                <p class="function-desc">GRAVITY-specific OIFITS handling with astrometry capabilities</p>
+                                <div class="function-methods">
+                                    <span class="method">chi2_phase()</span>
+                                    <span class="method">correct_groupdelay()</span>
+                                    <span class="method">correct_selfref()</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="submodule-section">
+                        <h4>astro_utils.py</h4>
+                        <div class="function-grid">
+                            <div class="function-card">
+                                <h5>compute_metzp(oi1List, oi2List, ra, dec, ...)</h5>
+                                <p class="function-desc">Compute metrology zero point for astrometry</p>
+                            </div>
+                            
+                            <div class="function-card">
+                                <h5>gdelay_astrometry(...)</h5>
+                                <p class="function-desc">Perform astrometry using group delay measurements</p>
+                            </div>
+                            
+                            <div class="function-card">
+                                <h5>grid_search(...)</h5>
+                                <p class="function-desc">Grid search for optimal astrometric parameters</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="submodule-section">
+                        <h4>gravi_utils.py</h4>
+                        <div class="function-grid">
+                            <div class="function-card">
+                                <h5>mask_outlier(x, size=10, nsigma=3, ...)</h5>
+                                <p class="function-desc">Mask outliers in data using sigma clipping</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="examples" class="section bg-light">
+            <div class="container">
+                <h2><i class="fas fa-code"></i> Examples</h2>
+                
+                <div class="example-tabs">
+                    <button class="tab-btn active" data-tab="basic-usage">Basic Usage</button>
+                    <button class="tab-btn" data-tab="ob-creation">OB Creation</button>
+                    <button class="tab-btn" data-tab="coordinate-conversion">Coordinates</button>
+                    <button class="tab-btn" data-tab="data-analysis">Data Analysis</button>
+                </div>
+
+                <div id="basic-usage" class="example-content active">
+                    <h3>Basic Package Usage</h3>
+                    <div class="code-block">
+                        <pre><code class="language-python">import gravity_obs as go
+
+# Calculate optimal DIT/NDIT for a K=8.5 mag source
+dit, ndit = go.get_dit_med(8.5, tel='UT')
+print(f"DIT: {dit}s, NDIT: {ndit}")
+
+# Search for a target in SIMBAD
+target_info = go.search_simbad('HD 164492')
+print(target_info)</code></pre>
+                    </div>
+                </div>
+
+                <div id="ob-creation" class="example-content">
+                    <h3>Creating Observation Blocks</h3>
+                    <div class="code-block">
+                        <pre><code class="language-python">from gravity_obs import p2api_GRAVITY
+
+# Initialize P2 API connection
+api = p2api_GRAVITY('109.23CR.001', username, password)
+
+# Create a dual off-axis acquisition OB
+api.add_GRAVITY_dual_offaxis_acq(
+    name='HD164492_acq',
+    folder_name='Calibrators',
+    ft_name='HD164492',
+    ft_kmag=8.5,
+    sc_name='Science_Target',
+    sc_kmag=12.0,
+    sobj_x=100.0,  # mas offset
+    sobj_y=50.0,   # mas offset
+    spec_res='MED'
+)</code></pre>
+                    </div>
+                </div>
+
+                <div id="coordinate-conversion" class="example-content">
+                    <h3>Coordinate Conversions</h3>
+                    <div class="code-block">
+                        <pre><code class="language-python">import gravity_obs as go
+
+# Convert coordinates from colon to decimal format
+ra_deg, dec_deg = go.coord_colon_to_degree('18:36:56.336', '-29:49:41.17')
+
+# Calculate science target offset from fringe tracker
+from astropy.coordinates import SkyCoord
+c_ft = SkyCoord('18:36:56.336 -29:49:41.17', unit='hourangle deg')
+c_sc = SkyCoord('18:36:56.400 -29:49:40.50', unit='hourangle deg')
+
+offset_x, offset_y = go.sc_offset(c_sc, c_ft)
+print(f"Offset: {offset_x:.1f}, {offset_y:.1f} mas")</code></pre>
+                    </div>
+                </div>
+
+                <div id="data-analysis" class="example-content">
+                    <h3>GRAVITY Data Analysis</h3>
+                    <div class="code-block">
+                        <pre><code class="language-python">from gravity_obs.gravidata import GravityOIFits
+
+# Load GRAVITY FITS file
+grav = GravityOIFits('GRAVI.2024-07-25T02:51:54.909_dualscivis.fits')
+
+# Perform astrometry
+ra_offset, dec_offset = grav.gdelay_astrometry(
+    polarization='COMBINED',
+    plot=True
+)
+
+print(f"Astrometric offset: RA={ra_offset:.3f}, Dec={dec_offset:.3f} mas")</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>GRAVITY_OBs</h3>
+                    <p>Python package for VLTI/GRAVITY observation preparation</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Links</h3>
+                    <ul>
+                        <li><a href="https://www.eso.org/sci/facilities/paranal/instruments/gravity.html">GRAVITY @ ESO</a></li>
+                        <li><a href="https://www.eso.org/sci/observing/phase2/p2intro.html">ESO Phase 2</a></li>
+                        <li><a href="https://github.com/user/GRAVITY_OBs">GitHub Repository</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact</h3>
+                    <p>For questions and support, please open an issue on GitHub</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 GRAVITY_OBs. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

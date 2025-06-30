@@ -14,13 +14,55 @@ except ImportError:
     Simbad = None
 
  
-__all__ = ['coord_offset', 'cal_offset', 'cal_coord_motion', 'sc_offset', 
+__all__ = ['coordinate_move_epoch', 'coord_offset', 'cal_offset', 
+           'cal_coord_motion', 'sc_offset', 
            'coord_colon_to_degree', 'coord_degree_to_colon',
            'get_coord_plain', 'get_coord_colon', 'get_pos_current', 
            'get_pos_J2000', 'get_pos_ao', 'read_coordinate', 
            'coordinate_convert_epoch', 'search_gaia_single', 
            'search_gaia_2table', 'xmatch_gaiadr2', 'xmatch_gaiadr3', 
            'xmatch_2mass_psc', 'search_simbad']
+
+
+def coordinate_move_epoch(ra, dec, pma, pmd, plx, rv, time0='2016-01-01', time1='2000-01-01'):
+    '''
+    Move the coordinate epoch. By default, convert from J2016 to J2000.
+
+    Parameters
+    ----------
+    ra : float
+        The right ascension in degree.
+    dec : float
+        The declination in degree.
+    pma : float
+        The proper motion of RA in mas/yr.
+    pmd : float
+        The proper motion of DEC in mas/yr.
+    plx : float
+        The parallax in mas.
+    rv : float
+        The radial velocity in km/s.
+    time0 : string (default: '2016-01-01')
+        The reference time of the input data.
+    time1 : string (default: '2000-01-01')
+        The time to convert the coordinate to.
+
+    Returns
+    -------
+    ra_new : float
+        The right ascension in degree at the target epoch.
+    dec_new : float
+        The declination in degree at the target epoch.
+    '''
+    c = SkyCoord(ra=ra * u.deg, dec=dec * u.deg,
+                    pm_ra_cosdec=pma * u.mas / u.yr,
+                    pm_dec=pmd * u.mas / u.yr,
+                    distance=Distance(parallax=plx * u.mas), radial_velocity=rv * u.km / u.s,
+                    frame='icrs', obstime=Time(time0))
+    c_2000 = c.apply_space_motion(Time(time1))
+    ra_new = c_2000.ra.deg
+    dec_new = c_2000.dec.deg
+    return ra_new, dec_new
 
 
 def cal_coord_motion(c, pma=None, pmd=None, plx=None, radvel=None,
@@ -68,7 +110,7 @@ def cal_coord_motion(c, pma=None, pmd=None, plx=None, radvel=None,
         time_cal = Time.now()
     else:
         time_cal = Time(time_cal)
-    c_c = c_m.apply_space_motion(time_cal).transform_to(GCRS(obstime=time_cal))
+    c_c = c_m.apply_space_motion(time_cal).transform_to(frame(obstime=time_cal))
     return c_c
 
 
@@ -681,9 +723,9 @@ def xmatch_gaiadr3(t, radius, colRA, colDec):
     for cn in ['ra_gaia_J2000', 'dec_gaia_J2000', 'pma', 'pmd', 'plx', 'rv', 'G']:
         assert cn not in t.colnames, 'The input table has {} as a column!'.format(cn)
     
-    t_o = XMatch.query(cat1=t,
-                       cat2='vizier:I/355/gaiadr3',
-                       max_distance=radius * u.arcsec, colRA1=colRA, colDec1=colDec)
+    t_o = XMatch.query(cat1='vizier:I/355/gaiadr3',
+                       cat2=t,
+                       max_distance=radius * u.arcsec, colRA2=colRA, colDec2=colDec)
     
     ra_j2000 = []
     ra_j2000_err = []
