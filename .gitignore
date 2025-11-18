@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+notebooks/
 # C extensions
 *.so
 
@@ -162,3 +162,5 @@ cython_debug/
 # Demo
 demo/results/*
 .DS_Store
+*.tar.gz
+workbooks.tar.gz
